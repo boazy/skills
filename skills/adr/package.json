@@ -1,0 +1,9 @@
+{
+  "name": "adr-skill",
+  "version": "1.0.0",
+  "description": "ADR management skill for Confluence",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}
