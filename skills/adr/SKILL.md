@@ -26,7 +26,7 @@ Manage Architecture Decision Records (ADRs) stored in Confluence. This skill cov
 |--------|-------|-----------------------|
 | Accepted / Approved | ✅ | `2705` |
 | Proposal / Proposed / Pending Approval | ⏳ | `23f3` |
-| Draft | 🗒️ | `1f5d2` |
+| Draft / Planning | 🗒️ | `1f5d2` |
 | Withdrawn / Rejected | 🚫 | `1f6ab` |
 | Postponed | ✋ | `270b` |
 

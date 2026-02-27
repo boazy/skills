@@ -12,9 +12,9 @@
  *
  * Emoji mapping:
  *   Accepted              → ✅ (U+2705)
- *   Proposal              → ⏳ (U+23F3)
+ *   Proposal / Proposed   → ⏳ (U+23F3)
  *   Pending Approval      → ⏳ (U+23F3)
- *   Draft                 → 🗒️ (U+1F5D2)
+ *   Draft / Planning      → 🗒️ (U+1F5D2)
  *   Withdrawn / Rejected  → 🚫 (U+1F6AB)
  *   Postponed             → ✋ (U+270B)
  *
@@ -47,6 +47,7 @@ const STATUS_EMOJI_MAP: Record<string, string> = {
   proposed: "23f3",           // ⏳ (variant of proposal)
   "pending approval": "23f3", // ⏳
   draft: "1f5d2",             // 🗒️
+  planning: "1f5d2",          // 🗒️
   withdrawn: "1f6ab",         // 🚫
   rejected: "1f6ab",          // 🚫
   postponed: "270b",          // ✋
