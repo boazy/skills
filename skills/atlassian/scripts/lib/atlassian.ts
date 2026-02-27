@@ -197,6 +197,16 @@ export async function confluencePut<T>(
   });
 }
 
+export async function confluenceDelete<T>(
+  endpoint: string
+): Promise<ApiResponse<T>> {
+  const cfg = getConfig();
+  const url = `https://${cfg.site}/wiki/api/v2/${endpoint}`;
+  return request<T>(url, cfg, {
+    method: "DELETE",
+  });
+}
+
 // Confluence legacy API (v1) - needed for CQL search
 export async function confluenceLegacyGet<T>(
   endpoint: string,

@@ -80,7 +80,7 @@ See `docs/cql-guide.md` for CQL syntax reference.
 ```bash
 npx tsx scripts/confluence-get.ts <pageId>
 # or by title
-npx tsx scripts/confluence-get.ts --title "<page title>" --space <spaceKey>
+npx tsx scripts/confluence-get.ts "<page title>" <spaceKey>
 ```
 
 #### Create Page
@@ -102,6 +102,37 @@ npx tsx scripts/confluence-create.ts '{"space": "DEV", "title": "Child Page", "b
 npx tsx scripts/confluence-update.ts <pageId> '<JSON updates>'
 ```
 Example: `npx tsx scripts/confluence-update.ts 123456 '{"title": "Updated Title", "body": "<p>New content</p>"}'`
+
+#### Page Properties (v2)
+
+```bash
+# List properties
+npx tsx scripts/confluence-properties.ts <pageId> get
+
+# Get a single property
+npx tsx scripts/confluence-properties.ts <pageId> get <propertyKey>
+
+# Set a property
+npx tsx scripts/confluence-properties.ts <pageId> set '<JSON>'
+
+# Delete a property
+npx tsx scripts/confluence-properties.ts <pageId> delete <propertyKey>
+
+# Get page emoji
+npx tsx scripts/confluence-properties.ts <pageId> get-emoji
+
+# Set page emoji (updates both emoji-title-published and emoji-title-draft)
+npx tsx scripts/confluence-properties.ts <pageId> set-emoji "🚀"
+
+# Remove page emoji
+npx tsx scripts/confluence-properties.ts <pageId> remove-emoji
+```
+
+Example property payloads:
+- `'{"key": "my-property", "value": {"foo": "bar"}}'`
+- `'{"properties": [{"key": "one", "value": 1}, {"key": "two", "value": "two"}]}'`
+
+Note: Page CRUD uses the Confluence REST API v2. CQL search still uses the legacy endpoint because the v2 API does not expose CQL search.
 
 ## Query Language References
 

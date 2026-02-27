@@ -1,4 +1,4 @@
-import { confluenceGet, confluenceLegacyGet, exitWithError, output, getSiteUrl } from "./lib/atlassian.ts";
+import { confluenceGet, exitWithError, output, getSiteUrl } from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -10,27 +10,28 @@ interface PageV2 {
   status: string;
   spaceId: string;
   parentId?: string;
-  authorId: string;
-  createdAt: string;
-  version: { number: number; createdAt: string };
-  body?: { storage?: { value: string } };
-}
-
-interface PageLegacy {
-  id: string;
-  title: string;
-  type: string;
-  status: string;
-  space: { key: string; name: string };
-  version: { number: number; when: string; by: { displayName: string } };
-  body: { storage: { value: string } };
-  _links: { webui: string };
+  version?: { number: number; createdAt?: string };
+  body?: { storage?: { value?: string } };
+  _links?: { webui?: string };
 }
 
 interface SpaceResponse {
   id: string;
   key: string;
   name: string;
+}
+
+interface ContentProperty {
+  id: string;
+  key: string;
+  value?: unknown;
+  version?: { number: number };
+}
+
+interface PropertyListResponse {
+  results: ContentProperty[];
+  size?: number;
+  _links?: { next?: string };
 }
 
 // ============================================================================
@@ -57,10 +58,75 @@ Examples:
   process.exit(1);
 }
 
+async function getSpaceByKey(spaceKey: string): Promise<SpaceResponse> {
+  const response = await confluenceGet<{ results: SpaceResponse[] }>("spaces", {
+    keys: spaceKey,
+    limit: "1",
+  });
+
+  if (!response.ok) {
+    exitWithError(response.error || `Failed to resolve space key ${spaceKey}`);
+  }
+
+  const space = response.data?.results.find(
+    (result) => result.key.toLowerCase() === spaceKey.toLowerCase()
+  );
+
+  if (!space) {
+    exitWithError(`Space "${spaceKey}" not found`);
+  }
+
+  return space;
+}
+
+async function tryGetSpaceById(spaceId: string): Promise<SpaceResponse | undefined> {
+  const response = await confluenceGet<SpaceResponse>(`spaces/${spaceId}`);
+  if (!response.ok) {
+    return undefined;
+  }
+
+  return response.data;
+}
+
+async function getPageProperties(pageId: string) {
+  const listResponse = await confluenceGet<PropertyListResponse>(
+    `pages/${pageId}/properties`
+  );
+
+  if (!listResponse.ok) {
+    exitWithError(listResponse.error || `Failed to fetch properties for page ${pageId}`);
+  }
+
+  const list = listResponse.data?.results ?? [];
+  const properties: ContentProperty[] = [];
+
+  for (const property of list) {
+    const detailResponse = await confluenceGet<ContentProperty>(
+      `pages/${pageId}/properties/${property.id}`
+    );
+
+    if (!detailResponse.ok) {
+      exitWithError(
+        detailResponse.error ||
+          `Failed to fetch property ${property.key} for page ${pageId}`
+      );
+    }
+
+    if (detailResponse.data) {
+      properties.push(detailResponse.data);
+    }
+  }
+
+  return {
+    total: listResponse.data?.size ?? properties.length,
+    hasMore: !!listResponse.data?._links?.next,
+    properties,
+  };
+}
+
 async function getPageById(pageId: string) {
-  // Use legacy API for richer response with body
-  const response = await confluenceLegacyGet<PageLegacy>(`content/${pageId}`, {
-    expand: "space,version,body.storage",
+  const response = await confluenceGet<PageV2>(`pages/${pageId}`, {
+    "body-format": "storage",
   });
 
   if (!response.ok) {
@@ -69,60 +135,44 @@ async function getPageById(pageId: string) {
 
   const page = response.data!;
   const siteUrl = getSiteUrl();
+  const space = page.spaceId ? await tryGetSpaceById(page.spaceId) : undefined;
+  const properties = await getPageProperties(page.id);
 
   output({
     id: page.id,
     title: page.title,
-    type: page.type,
     status: page.status,
-    space: {
-      key: page.space.key,
-      name: page.space.name,
-    },
-    version: page.version.number,
-    lastModified: page.version.when,
-    lastModifiedBy: page.version.by.displayName,
-    url: `${siteUrl}/wiki${page._links.webui}`,
-    body: page.body.storage.value,
+    space: space
+      ? { id: space.id, key: space.key, name: space.name }
+      : { id: page.spaceId },
+    parentId: page.parentId,
+    version: page.version?.number,
+    lastModified: page.version?.createdAt,
+    url: page._links?.webui ? `${siteUrl}/wiki${page._links.webui}` : undefined,
+    body: page.body?.storage?.value,
+    properties,
   });
 }
 
 async function getPageByTitle(title: string, spaceKey: string) {
-  // Search for page by title in space
-  const cql = `title = "${title.replace(/"/g, '\\"')}" AND space = "${spaceKey}" AND type = page`;
-  
-  const response = await confluenceLegacyGet<{ results: PageLegacy[] }>("content/search", {
-    cql,
+  const space = await getSpaceByKey(spaceKey);
+  const response = await confluenceGet<{ results: PageV2[] }>("pages", {
+    title,
+    "space-id": space.id,
     limit: "1",
-    expand: "space,version,body.storage",
+    "body-format": "storage",
   });
 
   if (!response.ok) {
     exitWithError(response.error || "Search failed");
   }
 
-  if (!response.data?.results.length) {
+  const page = response.data?.results?.[0];
+  if (!page) {
     exitWithError(`Page "${title}" not found in space ${spaceKey}`);
   }
 
-  const page = response.data.results[0];
-  const siteUrl = getSiteUrl();
-
-  output({
-    id: page.id,
-    title: page.title,
-    type: page.type,
-    status: page.status,
-    space: {
-      key: page.space.key,
-      name: page.space.name,
-    },
-    version: page.version.number,
-    lastModified: page.version.when,
-    lastModifiedBy: page.version.by.displayName,
-    url: `${siteUrl}/wiki${page._links.webui}`,
-    body: page.body.storage.value,
-  });
+  await getPageById(page.id);
 }
 
 async function main() {

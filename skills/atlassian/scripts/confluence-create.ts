@@ -1,4 +1,4 @@
-import { confluenceLegacyGet, exitWithError, output, parseJsonArg, getSiteUrl } from "./lib/atlassian.ts";
+import { confluenceGet, confluencePost, exitWithError, output, parseJsonArg, getSiteUrl } from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -9,13 +9,14 @@ interface CreatePageInput {
   title: string;
   body: string;
   parentId?: string;
+  status?: "current" | "draft";
 }
 
 interface CreatePageResponse {
   id: string;
   title: string;
-  type: string;
-  _links: { webui: string };
+  status?: string;
+  _links?: { webui?: string };
 }
 
 interface SpaceResponse {
@@ -57,71 +58,60 @@ Examples:
 }
 
 async function getSpaceId(spaceKey: string): Promise<string> {
-  const response = await confluenceLegacyGet<SpaceResponse>(`space/${spaceKey}`);
+  const response = await confluenceGet<{ results: SpaceResponse[] }>("spaces", {
+    keys: spaceKey,
+    limit: "1",
+  });
 
   if (!response.ok) {
-    exitWithError(response.error || `Space "${spaceKey}" not found`);
+    exitWithError(response.error || `Failed to resolve space key ${spaceKey}`);
   }
 
-  return response.data!.id;
+  const space = response.data?.results.find(
+    (result) => result.key.toLowerCase() === spaceKey.toLowerCase()
+  );
+  if (!space) {
+    exitWithError(`Space "${spaceKey}" not found`);
+  }
+
+  return space.id;
 }
 
 async function createPage(input: CreatePageInput) {
   // Validate required fields
-  if (!input.space || !input.title || !input.body) {
+  if (!input.space || !input.title || input.body == null) {
     exitWithError("Missing required fields: space, title, body");
   }
 
   // Build request body for legacy API
   const body: Record<string, unknown> = {
-    type: "page",
+    spaceId: await getSpaceId(input.space),
+    status: input.status || "current",
     title: input.title,
-    space: { key: input.space },
     body: {
-      storage: {
-        value: input.body,
-        representation: "storage",
-      },
+      representation: "storage",
+      value: input.body,
     },
   };
 
   if (input.parentId) {
-    body.ancestors = [{ id: input.parentId }];
+    body.parentId = input.parentId;
   }
 
-  // Use legacy API for page creation
-  const cfg = await import("./lib/atlassian.ts").then((m) => m.getConfig());
-  const url = `https://${cfg.site}/wiki/rest/api/content`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString("base64")}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const response = await confluencePost<CreatePageResponse>("pages", body);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage: string;
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.message || errorText;
-    } catch {
-      errorMessage = errorText;
-    }
-    exitWithError(`Failed to create page: ${errorMessage}`);
+    exitWithError(response.error || "Failed to create page");
   }
 
-  const data = (await response.json()) as CreatePageResponse;
+  const data = response.data!;
   const siteUrl = getSiteUrl();
 
   output({
     id: data.id,
     title: data.title,
-    url: `${siteUrl}/wiki${data._links.webui}`,
+    status: data.status,
+    url: data._links?.webui ? `${siteUrl}/wiki${data._links.webui}` : undefined,
     success: true,
   });
 }

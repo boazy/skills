@@ -1,4 +1,4 @@
-import { confluenceLegacyGet, exitWithError, output, parseJsonArg, getSiteUrl, getConfig } from "./lib/atlassian.ts";
+import { confluenceGet, confluencePut, exitWithError, output, parseJsonArg, getSiteUrl } from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -12,9 +12,12 @@ interface UpdateInput {
 interface PageResponse {
   id: string;
   title: string;
-  type: string;
-  version: { number: number };
-  _links: { webui: string };
+  status: string;
+  spaceId: string;
+  parentId?: string;
+  version?: { number: number };
+  body?: { storage?: { value?: string } };
+  _links?: { webui?: string };
 }
 
 // ============================================================================
@@ -48,13 +51,22 @@ Examples:
 }
 
 async function updatePage(pageId: string, updates: UpdateInput) {
-  if (!updates.title && !updates.body) {
+  const hasTitleUpdate = updates.title != null;
+  const hasBodyUpdate = updates.body != null;
+
+  if (!hasTitleUpdate && !hasBodyUpdate) {
     exitWithError("At least one of title or body must be provided");
   }
 
+  if (hasTitleUpdate && typeof updates.title === "string") {
+    if (updates.title.trim().length === 0) {
+      exitWithError("Title cannot be empty");
+    }
+  }
+
   // Get current page version
-  const currentResponse = await confluenceLegacyGet<PageResponse>(`content/${pageId}`, {
-    expand: "version",
+  const currentResponse = await confluenceGet<PageResponse>(`pages/${pageId}`, {
+    "body-format": "storage",
   });
 
   if (!currentResponse.ok) {
@@ -62,59 +74,46 @@ async function updatePage(pageId: string, updates: UpdateInput) {
   }
 
   const current = currentResponse.data!;
-  const nextVersion = current.version.number + 1;
+  const currentVersion = current.version?.number;
+  if (!currentVersion) {
+    exitWithError(`Page ${pageId} is missing version metadata`);
+  }
+
+  const nextVersion = currentVersion + 1;
+  const bodyValue = hasBodyUpdate ? updates.body : current.body?.storage?.value;
+
+  if (bodyValue == null) {
+    exitWithError("Unable to determine existing page body. Provide a body update.");
+  }
 
   // Build update body
   const body: Record<string, unknown> = {
     id: pageId,
-    type: current.type,
-    title: updates.title || current.title,
+    status: current.status,
+    title: hasTitleUpdate ? updates.title : current.title,
+    spaceId: current.spaceId,
+    parentId: current.parentId,
+    body: {
+      representation: "storage",
+      value: bodyValue,
+    },
     version: { number: nextVersion },
   };
 
-  if (updates.body) {
-    body.body = {
-      storage: {
-        value: updates.body,
-        representation: "storage",
-      },
-    };
-  }
-
-  // Use legacy API for page update
-  const cfg = getConfig();
-  const url = `https://${cfg.site}/wiki/rest/api/content/${pageId}`;
-
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString("base64")}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const response = await confluencePut<PageResponse>(`pages/${pageId}`, body);
 
   if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage: string;
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.message || errorText;
-    } catch {
-      errorMessage = errorText;
-    }
-    exitWithError(`Failed to update page: ${errorMessage}`);
+    exitWithError(response.error || "Failed to update page");
   }
 
-  const data = (await response.json()) as PageResponse;
+  const data = response.data!;
   const siteUrl = getSiteUrl();
 
   output({
     id: data.id,
     title: data.title,
-    version: data.version.number,
-    url: `${siteUrl}/wiki${data._links.webui}`,
+    version: data.version?.number,
+    url: data._links?.webui ? `${siteUrl}/wiki${data._links.webui}` : undefined,
     success: true,
   });
 }
