@@ -1,4 +1,4 @@
-import { jiraGet, jiraPut, jiraPost, exitWithError, output, parseJsonArg } from "./lib/atlassian.ts";
+import { jiraGet, jiraPut, jiraPost, exitWithError, output, parseJsonArg, markdownToAdf } from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -107,16 +107,7 @@ async function main() {
 
   if (updates.description !== undefined) {
     fields.description = updates.description
-      ? {
-          type: "doc",
-          version: 1,
-          content: [
-            {
-              type: "paragraph",
-              content: [{ type: "text", text: updates.description }],
-            },
-          ],
-        }
+      ? markdownToAdf(updates.description)
       : null;
   }
 

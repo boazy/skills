@@ -1,4 +1,4 @@
-import { jiraGet, jiraPost, exitWithError, output, parseJsonArg, getSiteUrl } from "./lib/atlassian.ts";
+import { jiraGet, jiraPost, exitWithError, output, parseJsonArg, getSiteUrl, markdownToAdf } from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -125,17 +125,7 @@ async function createSingleIssue(input: CreateIssueInput): Promise<{ key: string
   };
 
   if (input.description) {
-    // Atlassian Document Format for description
-    fields.description = {
-      type: "doc",
-      version: 1,
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: input.description }],
-        },
-      ],
-    };
+    fields.description = markdownToAdf(input.description);
   }
 
   if (input.priority) {
