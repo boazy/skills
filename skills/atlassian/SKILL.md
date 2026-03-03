@@ -64,6 +64,19 @@ npx tsx scripts/jira-comment.ts <issueKey> get
 npx tsx scripts/jira-comment.ts <issueKey> add "<comment text>"
 ```
 
+#### Upload Attachment
+```bash
+npx tsx scripts/jira-attachment.ts <issueKey> <filePath> [fileName]
+```
+Examples:
+- `npx tsx scripts/jira-attachment.ts PROJ-123 ./diagram.png`
+- `npx tsx scripts/jira-attachment.ts PROJ-123 ./image.png architecture.png`
+
+Image embedding note:
+- For markdown image syntax (`![alt](url)`), the converter uses `mediaSingle` only for Atlassian-hosted URLs.
+- External image URLs fall back to a clickable link to avoid Jira `INVALID_INPUT` errors.
+- If you want embedded images, upload the file first with `jira-attachment.ts`, then use the returned Atlassian `contentUrl` in your markdown image URL.
+
 ### Confluence
 
 #### Search Pages
