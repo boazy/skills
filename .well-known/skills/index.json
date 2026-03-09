@@ -1,0 +1,20 @@
+{
+  "skills": [
+    {
+      "name": "adr",
+      "description": "Manage Architecture Decision Records (ADRs) in Confluence — create new ADRs from template, update existing ones, generate status reports, sync status emojis, and review ADRs for quality. Use when ADR, architecture decision, or design record is mentioned.",
+      "files": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "name": "atlassian",
+      "description": "Interact with Jira and Confluence via REST API - search, create, update issues and pages",
+      "files": [
+        "SKILL.md",
+        "docs/jql-guide.md",
+        "docs/cql-guide.md"
+      ]
+    }
+  ]
+}

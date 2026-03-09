@@ -1,0 +1,54 @@
+name: Deploy Skills to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build site
+        run: |
+          mkdir -p _site/.well-known/skills
+
+          # Copy the index
+          cp .well-known/skills/index.json _site/.well-known/skills/index.json
+
+          # For each skill listed in index.json, copy its declared files
+          for skill_name in $(jq -r '.skills[].name' .well-known/skills/index.json); do
+            for file in $(jq -r --arg s "$skill_name" '.skills[] | select(.name == $s) | .files[]' .well-known/skills/index.json); do
+              mkdir -p "_site/.well-known/skills/${skill_name}/$(dirname "$file")"
+              cp "skills/${skill_name}/${file}" "_site/.well-known/skills/${skill_name}/${file}"
+            done
+          done
+
+          # Disable Jekyll processing
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
