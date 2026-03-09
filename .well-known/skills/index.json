@@ -15,6 +15,14 @@
         "docs/jql-guide.md",
         "docs/cql-guide.md"
       ]
+    },
+    {
+      "name": "d2-diagrams",
+      "description": "Generate diagrams from declarative text using D2 - modern text-to-diagram language with automatic layouts, themes, and advanced styling. Use when creating architecture diagrams, flowcharts, decision trees, workflow diagrams, sequence flows, or ERDs from text definitions.",
+      "files": [
+        "SKILL.md",
+        "REFERENCE.md"
+      ]
     }
   ]
 }
