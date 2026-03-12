@@ -79,6 +79,41 @@ Image embedding note:
 
 ### Confluence
 
+#### Personal Space
+
+When the user asks to work with their **personal space** (e.g., "write a page in my personal space", "search my personal space", "read a page from my space"), you MUST first discover their personal space before performing the requested operation.
+
+**Auto-detection rule**: Any mention of "my space", "my personal space", "personal space", or "my Confluence space" means the user's personal Confluence space. Always run the discovery script first to get the space key and ID, then use those values in subsequent operations (create, search, get, etc.).
+
+##### Discover Personal Space
+```bash
+npx tsx scripts/confluence-personal-space.ts
+```
+No arguments needed. Returns the current user's personal space key, ID, name, and URL.
+
+Example output:
+```json
+{
+  "accountId": "5b10a2844c20165700ede21g",
+  "displayName": "Jane Smith",
+  "space": {
+    "id": 98304,
+    "key": "~5b10a2844c20165700ede21g",
+    "name": "Jane Smith",
+    "type": "personal",
+    "status": "current",
+    "url": "https://yourcompany.atlassian.net/wiki/spaces/~5b10a2844c20165700ede21g"
+  }
+}
+```
+
+Then use the returned `space.key` as the space key for other Confluence operations. For example:
+- **Create page**: `npx tsx scripts/confluence-create.ts '{"space": "~5b10a2844c20165700ede21g", "title": "My Notes", "body": "<p>Content</p>"}'`
+- **Search pages**: `npx tsx scripts/confluence-search.ts "space = ~5b10a2844c20165700ede21g AND type = page"`
+- **Get page by title**: `npx tsx scripts/confluence-get.ts "My Notes" ~5b10a2844c20165700ede21g`
+
+Note: Personal space keys on Confluence Cloud use the format `~accountId` (not `~username`). The discovery script handles this automatically.
+
 #### Search Pages
 ```bash
 npx tsx scripts/confluence-search.ts "<CQL query>" [maxResults]
@@ -168,3 +203,9 @@ For generating correct queries:
 
 ### Create a new documentation page
 1. Create: `npx tsx scripts/confluence-create.ts '{"space": "DEV", "title": "API Guide", "body": "<h1>API Guide</h1><p>...</p>"}'`
+
+### Work with your personal space
+1. Discover: `npx tsx scripts/confluence-personal-space.ts` → note the `space.key` value
+2. Search: `npx tsx scripts/confluence-search.ts "space = <space.key> AND type = page"`
+3. Create: `npx tsx scripts/confluence-create.ts '{"space": "<space.key>", "title": "My Page", "body": "<p>Content</p>"}'`
+4. Read: `npx tsx scripts/confluence-get.ts "<page title>" <space.key>`
