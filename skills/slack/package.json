@@ -1,0 +1,9 @@
+{
+  "name": "slack-skill",
+  "version": "1.0.0",
+  "description": "Slack integration skill — read, post, search, react via Slack Web API",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}

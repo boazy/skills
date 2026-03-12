@@ -1,0 +1,60 @@
+# Slack App Manifest — Reference Copy
+#
+# This manifest is created programmatically by slack-app-create.ts.
+# It is included here for reference only. You do NOT need to paste it manually.
+#
+# To set up:
+#   1. Get a config token at https://api.slack.com/apps
+#   2. Run: npx tsx scripts/slack-app-create.ts <configToken>
+#   3. Run: npx tsx scripts/slack-auth.ts
+_metadata:
+  major_version: 2
+  minor_version: 1
+
+display_information:
+  name: "Agent Slack Skill"
+  description: "AI agent integration — read, post, search, and react in Slack on the user's behalf"
+  background_color: "#4A154B"
+
+oauth_config:
+  redirect_urls:
+    - http://localhost:51234/slack/oauth/callback
+  scopes:
+    # -------------------------------------------------------------------
+    # User Token Scopes (xoxp-)
+    # All operations run as the authenticated user, not a bot.
+    # -------------------------------------------------------------------
+    user:
+      # List and read channel/group info
+      - channels:read
+      - groups:read
+      - im:read
+      - mpim:read
+
+      # Read message history (all conversation types)
+      - channels:history
+      - groups:history
+      - im:history
+      - mpim:history
+
+      # Post and edit messages
+      - chat:write
+
+      # Open DMs and group DMs
+      - im:write
+      - mpim:write
+
+      # Add reactions
+      - reactions:write
+
+      # List and look up users
+      - users:read
+      - users:read.email
+
+      # Full-text message search
+      - search:read
+
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

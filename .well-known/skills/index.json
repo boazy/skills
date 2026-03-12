@@ -23,6 +23,14 @@
         "SKILL.md",
         "REFERENCE.md"
       ]
+    },
+    {
+      "name": "slack",
+      "description": "Read channels, DMs, and threads; post and edit messages; search messages and users; add reactions; upload custom emojis — all via the Slack Web API. Use when Slack, messaging, or workspace communication is mentioned.",
+      "files": [
+        "SKILL.md",
+        "docs/message-formatting.md"
+      ]
     }
   ]
 }
