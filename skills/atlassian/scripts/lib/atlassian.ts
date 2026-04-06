@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { readFileSync } from "fs";
 import { readFile } from "fs/promises";
 import { basename, resolve } from "path";
 import os from "os";
@@ -289,10 +290,25 @@ export function output(data: unknown): void {
 }
 
 export function parseJsonArg<T>(arg: string, name: string): T {
+  let jsonStr = arg;
+
+  // Support @filepath syntax: read JSON from a file instead of inline.
+  // Use this for large payloads that exceed shell argument limits.
+  if (arg.startsWith("@")) {
+    const filePath = arg.slice(1);
+    try {
+      jsonStr = readFileSync(filePath, "utf-8");
+    } catch (err) {
+      exitWithError(
+        `Failed to read file "${filePath}": ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   try {
-    return JSON.parse(arg) as T;
+    return JSON.parse(jsonStr) as T;
   } catch {
-    exitWithError(`Invalid JSON for ${name}: ${arg}`);
+    exitWithError(`Invalid JSON for ${name}: ${jsonStr.slice(0, 200)}`);
   }
 }
 

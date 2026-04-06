@@ -188,6 +188,48 @@ For generating correct queries:
 - **Jira**: Read `docs/jql-guide.md` for JQL syntax, fields, operators, and functions
 - **Confluence**: Read `docs/cql-guide.md` for CQL syntax and fields
 
+## Large Content — File-Based Input
+
+All scripts that accept a `'<JSON>'` argument also support `@<filepath>` syntax: write the JSON to a file first, then pass `@path/to/file.json` instead of the inline JSON string. This avoids shell argument-length limits that cause failures with large page bodies or issue descriptions.
+
+**You MUST use file-based input when creating or updating Confluence pages or Jira issues with non-trivial body/description content.** Inline JSON is fine only for short payloads (simple metadata updates, status changes, etc.).
+
+### Workflow
+
+1. Write the JSON payload to a temporary file (e.g., `/tmp/confluence-payload.json`)
+2. Pass `@/tmp/confluence-payload.json` as the argument instead of the raw JSON string
+3. Clean up the temp file afterward
+
+### Examples
+
+Create a Confluence page with a large body:
+```bash
+# 1. Write payload to file
+cat > /tmp/page.json << 'ENDJSON'
+{"space": "DEV", "title": "Architecture Overview", "body": "<h1>Architecture</h1><p>Long content here...</p>"}
+ENDJSON
+
+# 2. Pass with @filepath
+npx tsx scripts/confluence-create.ts @/tmp/page.json
+```
+
+Update a Confluence page:
+```bash
+npx tsx scripts/confluence-update.ts 123456 @/tmp/update-payload.json
+```
+
+Create a Jira issue with a long description:
+```bash
+npx tsx scripts/jira-create.ts @/tmp/issue.json
+```
+
+Update a Jira issue:
+```bash
+npx tsx scripts/jira-update.ts PROJ-123 @/tmp/update.json
+```
+
+**Important**: When generating content programmatically (as an AI agent), always use the Write tool to create the JSON file, then invoke the script with `@filepath`. Never attempt to pass large HTML or markdown content as an inline shell argument.
+
 ## Common Workflows
 
 ### Find and update my open issues
