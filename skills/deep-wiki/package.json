@@ -1,0 +1,6 @@
+{
+  "name": "deep-wiki-skill",
+  "version": "1.0.0",
+  "description": "DeepWiki CLI wrappers for querying public GitHub repo documentation",
+  "type": "module"
+}

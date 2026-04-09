@@ -23,20 +23,20 @@ The setup process creates a Slack app and authenticates via OAuth — all automa
 
 **Step 2** — Create the Slack app:
 ```bash
-npx tsx scripts/slack-app-create.ts <configToken>
+bunx tsx scripts/slack-app-create.ts <configToken>
 ```
 This creates the app on the selected workspace and saves credentials locally.
 
 **Step 3** — Authenticate:
 ```bash
-npx tsx scripts/slack-auth.ts
+bunx tsx scripts/slack-auth.ts
 ```
 This opens your browser for Slack OAuth. Authorize the app and the token is saved automatically.
 
 ### Re-authenticate
 
 ```bash
-npx tsx scripts/slack-auth.ts --force
+bunx tsx scripts/slack-auth.ts --force
 ```
 
 ### Manual Token Setup (alternative)
@@ -65,7 +65,7 @@ When the user invokes `/slack-setup`, follow this workflow:
 
 3. Once the user provides the token, create the app:
    ```bash
-   npx tsx scripts/slack-app-create.ts <configToken>
+   bunx tsx scripts/slack-app-create.ts <configToken>
    ```
 
 4. After successful creation, proceed to authentication by running `/slack-auth`.
@@ -89,12 +89,12 @@ When the user invokes `/slack-auth`, follow this workflow:
 
 4. Run auth according to mode:
    - **Local mode**:
-     - Run `npx tsx scripts/slack-auth.ts --local`.
+     - Run `bunx tsx scripts/slack-auth.ts --local`.
      - Keep it in the background while user authenticates in browser.
      - The callback server auto-closes after 5 minutes of inactivity.
      - If user sees "awaiting approval", tell them to request admin approval and run `/slack-auth` again after approval.
    - **Remote mode**:
-     - Run `npx tsx scripts/slack-auth.ts --remote`.
+     - Run `bunx tsx scripts/slack-auth.ts --remote`.
      - Do not run a callback server and do not auto-open a browser.
      - Ask the user to open the OAuth URL manually.
      - Then ask them to either paste the redirected URL, report `WAITING_APPROVAL`, or provide `OAUTH_ERROR:<message>`.
@@ -111,7 +111,7 @@ When the user invokes `/slack-auth`, follow this workflow:
 All scripts are run from this skill's directory:
 
 ```bash
-npx tsx scripts/<script>.ts [args]
+bunx tsx scripts/<script>.ts [args]
 ```
 
 ---
@@ -119,8 +119,8 @@ npx tsx scripts/<script>.ts [args]
 ### List Channels
 
 ```bash
-npx tsx scripts/slack-channels.ts list [types] [cursor]
-npx tsx scripts/slack-channels.ts info <channelId>
+bunx tsx scripts/slack-channels.ts list [types] [cursor]
+bunx tsx scripts/slack-channels.ts info <channelId>
 ```
 
 **list** — List conversations in the workspace.
@@ -130,16 +130,16 @@ npx tsx scripts/slack-channels.ts info <channelId>
 **info** — Get details about a specific channel.
 
 Examples:
-- `npx tsx scripts/slack-channels.ts list` — list public and private channels
-- `npx tsx scripts/slack-channels.ts list "im,mpim"` — list DMs and group DMs
-- `npx tsx scripts/slack-channels.ts info C01ABC123` — get channel details
+- `bunx tsx scripts/slack-channels.ts list` — list public and private channels
+- `bunx tsx scripts/slack-channels.ts list "im,mpim"` — list DMs and group DMs
+- `bunx tsx scripts/slack-channels.ts info C01ABC123` — get channel details
 
 ---
 
 ### Read Message History
 
 ```bash
-npx tsx scripts/slack-history.ts <channelId> [limit] [cursor] [oldest] [latest]
+bunx tsx scripts/slack-history.ts <channelId> [limit] [cursor] [oldest] [latest]
 ```
 
 Read messages from any conversation (channel, DM, or group DM).
@@ -150,16 +150,16 @@ Read messages from any conversation (channel, DM, or group DM).
 - `oldest`/`latest`: Unix timestamps to bound the time range
 
 Examples:
-- `npx tsx scripts/slack-history.ts C01ABC123` — latest 50 messages
-- `npx tsx scripts/slack-history.ts D01ABC123 100` — latest 100 DM messages
-- `npx tsx scripts/slack-history.ts C01ABC123 50 "" "1700000000"` — messages since timestamp
+- `bunx tsx scripts/slack-history.ts C01ABC123` — latest 50 messages
+- `bunx tsx scripts/slack-history.ts D01ABC123 100` — latest 100 DM messages
+- `bunx tsx scripts/slack-history.ts C01ABC123 50 "" "1700000000"` — messages since timestamp
 
 ---
 
 ### Read Thread Replies
 
 ```bash
-npx tsx scripts/slack-threads.ts <channelId> <threadTs> [limit] [cursor]
+bunx tsx scripts/slack-threads.ts <channelId> <threadTs> [limit] [cursor]
 ```
 
 Read all replies in a thread.
@@ -169,15 +169,15 @@ Read all replies in a thread.
 - `limit`: Max replies (default: 100)
 
 Examples:
-- `npx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001`
-- `npx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001 200`
+- `bunx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001`
+- `bunx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001 200`
 
 ---
 
 ### Send Messages
 
 ```bash
-npx tsx scripts/slack-send.ts <channelId> <text> [threadTs]
+bunx tsx scripts/slack-send.ts <channelId> <text> [threadTs]
 ```
 
 Post a message to a channel, DM, or thread.
@@ -187,16 +187,16 @@ Post a message to a channel, DM, or thread.
 - `threadTs`: Optional parent message timestamp to reply in a thread
 
 Examples:
-- `npx tsx scripts/slack-send.ts C01ABC123 "Hello, team!"` — post to channel
-- `npx tsx scripts/slack-send.ts C01ABC123 "Agreed" 1700000000.000001` — reply in thread
-- `npx tsx scripts/slack-send.ts D01ABC123 "Hey, got a minute?"` — send DM
+- `bunx tsx scripts/slack-send.ts C01ABC123 "Hello, team!"` — post to channel
+- `bunx tsx scripts/slack-send.ts C01ABC123 "Agreed" 1700000000.000001` — reply in thread
+- `bunx tsx scripts/slack-send.ts D01ABC123 "Hey, got a minute?"` — send DM
 
 ---
 
 ### Open DMs
 
 ```bash
-npx tsx scripts/slack-dm-open.ts <userIds>
+bunx tsx scripts/slack-dm-open.ts <userIds>
 ```
 
 Open a DM or group DM conversation. Returns the channel ID to use with `slack-send.ts`.
@@ -204,22 +204,22 @@ Open a DM or group DM conversation. Returns the channel ID to use with `slack-se
 - `userIds`: Comma-separated user IDs. 1 user = DM, 2–8 users = group DM.
 
 Examples:
-- `npx tsx scripts/slack-dm-open.ts U01ABC123` — open DM with one user
-- `npx tsx scripts/slack-dm-open.ts U01ABC123,U02DEF456` — open group DM
+- `bunx tsx scripts/slack-dm-open.ts U01ABC123` — open DM with one user
+- `bunx tsx scripts/slack-dm-open.ts U01ABC123,U02DEF456` — open group DM
 
 ### Send a New DM Workflow
 
 To send a DM to a user:
-1. Find the user: `npx tsx scripts/slack-users.ts search "John"`
-2. Open the DM: `npx tsx scripts/slack-dm-open.ts U01ABC123`
-3. Send the message: `npx tsx scripts/slack-send.ts D01ABC123 "Hey John!"`
+1. Find the user: `bunx tsx scripts/slack-users.ts search "John"`
+2. Open the DM: `bunx tsx scripts/slack-dm-open.ts U01ABC123`
+3. Send the message: `bunx tsx scripts/slack-send.ts D01ABC123 "Hey John!"`
 
 ---
 
 ### Edit Messages
 
 ```bash
-npx tsx scripts/slack-edit.ts <channelId> <messageTs> <text>
+bunx tsx scripts/slack-edit.ts <channelId> <messageTs> <text>
 ```
 
 Edit a previously posted message. **Note: you can only edit messages that you have posted.**
@@ -229,14 +229,14 @@ Edit a previously posted message. **Note: you can only edit messages that you ha
 - `text`: New message text
 
 Examples:
-- `npx tsx scripts/slack-edit.ts C01ABC123 1700000000.000001 "Updated: correct info here"`
+- `bunx tsx scripts/slack-edit.ts C01ABC123 1700000000.000001 "Updated: correct info here"`
 
 ---
 
 ### Add Reactions
 
 ```bash
-npx tsx scripts/slack-react.ts <channelId> <messageTs> <emoji>
+bunx tsx scripts/slack-react.ts <channelId> <messageTs> <emoji>
 ```
 
 Add an emoji reaction to a message.
@@ -246,18 +246,18 @@ Add an emoji reaction to a message.
 - `emoji`: Emoji name without colons (e.g., `thumbsup`, `white_check_mark`)
 
 Examples:
-- `npx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 thumbsup`
-- `npx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 eyes`
+- `bunx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 thumbsup`
+- `bunx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 eyes`
 
 ---
 
 ### Search / List Users
 
 ```bash
-npx tsx scripts/slack-users.ts list [cursor]
-npx tsx scripts/slack-users.ts info <userId>
-npx tsx scripts/slack-users.ts email <email>
-npx tsx scripts/slack-users.ts search <query>
+bunx tsx scripts/slack-users.ts list [cursor]
+bunx tsx scripts/slack-users.ts info <userId>
+bunx tsx scripts/slack-users.ts email <email>
+bunx tsx scripts/slack-users.ts search <query>
 ```
 
 - **list** — List all workspace users (paginated)
@@ -266,16 +266,16 @@ npx tsx scripts/slack-users.ts search <query>
 - **search** — Search users by name, display name, or email
 
 Examples:
-- `npx tsx scripts/slack-users.ts search "John"` — find users matching "John"
-- `npx tsx scripts/slack-users.ts email john@company.com` — find user by email
-- `npx tsx scripts/slack-users.ts info U01ABC123` — get user profile
+- `bunx tsx scripts/slack-users.ts search "John"` — find users matching "John"
+- `bunx tsx scripts/slack-users.ts email john@company.com` — find user by email
+- `bunx tsx scripts/slack-users.ts info U01ABC123` — get user profile
 
 ---
 
 ### Search Messages
 
 ```bash
-npx tsx scripts/slack-search.ts <query> [count] [page] [sort] [sortDir]
+bunx tsx scripts/slack-search.ts <query> [count] [page] [sort] [sortDir]
 ```
 
 
@@ -293,16 +293,16 @@ Search modifiers:
 - `during:january` — messages during a time period
 
 Examples:
-- `npx tsx scripts/slack-search.ts "deployment issue"`
-- `npx tsx scripts/slack-search.ts "from:@john in:#engineering" 50`
-- `npx tsx scripts/slack-search.ts "has:reaction after:2024-06-01"`
+- `bunx tsx scripts/slack-search.ts "deployment issue"`
+- `bunx tsx scripts/slack-search.ts "from:@john in:#engineering" 50`
+- `bunx tsx scripts/slack-search.ts "has:reaction after:2024-06-01"`
 
 ---
 
 ### Upload Custom Emoji
 
 ```bash
-npx tsx scripts/slack-emoji-upload.ts <name> <imagePath>
+bunx tsx scripts/slack-emoji-upload.ts <name> <imagePath>
 ```
 
 **Enterprise Grid only** — requires `admin.emoji:write` scope and org-level installation. Not available on free or standard paid Slack workspaces.
@@ -311,8 +311,8 @@ npx tsx scripts/slack-emoji-upload.ts <name> <imagePath>
 - `imagePath`: Path to image file (PNG, GIF, JPEG; max 128KB; square recommended)
 
 Examples:
-- `npx tsx scripts/slack-emoji-upload.ts party_parrot ./party_parrot.gif`
-- `npx tsx scripts/slack-emoji-upload.ts company_logo ./logo.png`
+- `bunx tsx scripts/slack-emoji-upload.ts party_parrot ./party_parrot.gif`
+- `bunx tsx scripts/slack-emoji-upload.ts company_logo ./logo.png`
 
 ---
 
@@ -335,18 +335,18 @@ Quick reference:
 ## Common Workflows
 
 ### Read and respond to a thread
-1. Get recent messages: `npx tsx scripts/slack-history.ts C01ABC123 20`
-2. Read a thread: `npx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001`
-3. Reply: `npx tsx scripts/slack-send.ts C01ABC123 "My response" 1700000000.000001`
+1. Get recent messages: `bunx tsx scripts/slack-history.ts C01ABC123 20`
+2. Read a thread: `bunx tsx scripts/slack-threads.ts C01ABC123 1700000000.000001`
+3. Reply: `bunx tsx scripts/slack-send.ts C01ABC123 "My response" 1700000000.000001`
 
 ### Find a user and DM them
-1. Search: `npx tsx scripts/slack-users.ts search "Jane"`
-2. Open DM: `npx tsx scripts/slack-dm-open.ts U01ABC123`
-3. Send: `npx tsx scripts/slack-send.ts D01ABC123 "Hey Jane, quick question..."`
+1. Search: `bunx tsx scripts/slack-users.ts search "Jane"`
+2. Open DM: `bunx tsx scripts/slack-dm-open.ts U01ABC123`
+3. Send: `bunx tsx scripts/slack-send.ts D01ABC123 "Hey Jane, quick question..."`
 
 ### Search for messages and react
-1. Search: `npx tsx scripts/slack-search.ts "important announcement in:#general"`
-2. React: `npx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 white_check_mark`
+1. Search: `bunx tsx scripts/slack-search.ts "important announcement in:#general"`
+2. React: `bunx tsx scripts/slack-react.ts C01ABC123 1700000000.000001 white_check_mark`
 
 ## Important Notes
 

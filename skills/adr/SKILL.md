@@ -43,7 +43,7 @@ This is the primary purpose of this skill. Follow these steps exactly.
 Search existing ADRs and find the highest number:
 
 ```bash
-npx tsx scripts/confluence-search.ts "space = CE AND type = page AND ancestor = 31859277900" 50
+bunx tsx scripts/confluence-search.ts "space = CE AND type = page AND ancestor = 31859277900" 50
 ```
 
 Parse the results, extract all `ADR-NNN` numbers from titles, and use `max + 1`.
@@ -68,13 +68,13 @@ Use the template below. Replace all `{{PLACEHOLDERS}}` with actual content. Pres
 ### Step 4: Create the page
 
 ```bash
-npx tsx scripts/confluence-create.ts '{"space": "CE", "title": "ADR-NNN: Title Here", "body": "<HTML_BODY>", "parentId": "31859277900"}'
+bunx tsx scripts/confluence-create.ts '{"space": "CE", "title": "ADR-NNN: Title Here", "body": "<HTML_BODY>", "parentId": "31859277900"}'
 ```
 
 ### Step 5: Set the page emoji
 
 ```bash
-npx tsx scripts/confluence-properties.ts <pageId> set-emoji "<CODE_POINT>"
+bunx tsx scripts/confluence-properties.ts <pageId> set-emoji "<CODE_POINT>"
 ```
 
 Use the code point from the Status/Emoji table above (e.g., `1f5d2` for Draft).
@@ -174,7 +174,7 @@ For body sections (`{{MOTIVATION_HTML}}`, `{{GOALS_HTML}}`, etc.), generate vali
 
 1. **Fetch the existing ADR**:
    ```bash
-   npx tsx scripts/confluence-get.ts <pageId>
+   bunx tsx scripts/confluence-get.ts <pageId>
    ```
 
 2. **Parse the HTML body** and identify the section(s) to modify.
@@ -183,12 +183,12 @@ For body sections (`{{MOTIVATION_HTML}}`, `{{GOALS_HTML}}`, etc.), generate vali
 
 4. **Update the page**:
    ```bash
-   npx tsx scripts/confluence-update.ts <pageId> '{"body": "<UPDATED_HTML>"}'
+   bunx tsx scripts/confluence-update.ts <pageId> '{"body": "<UPDATED_HTML>"}'
    ```
 
 5. **If the status changed**, update the page emoji:
    ```bash
-   npx tsx scripts/confluence-properties.ts <pageId> set-emoji "<CODE_POINT>"
+   bunx tsx scripts/confluence-properties.ts <pageId> set-emoji "<CODE_POINT>"
    ```
 
 ### Common Update Scenarios
@@ -207,10 +207,10 @@ Generate a report of all ADRs and their current status.
 
 ```bash
 # Markdown format (default)
-npx tsx scripts/adr-report.ts
+bunx tsx scripts/adr-report.ts
 
 # JSON format
-npx tsx scripts/adr-report.ts json
+bunx tsx scripts/adr-report.ts json
 ```
 
 Run from: `@path scripts/adr-report.ts` (relative to this skill's directory)
@@ -231,10 +231,10 @@ Iterate through all ADRs and update their Confluence page emoji to match their s
 
 ```bash
 # Preview what would change
-npx tsx scripts/adr-sync-emojis.ts --dry-run
+bunx tsx scripts/adr-sync-emojis.ts --dry-run
 
 # Actually sync emojis
-npx tsx scripts/adr-sync-emojis.ts
+bunx tsx scripts/adr-sync-emojis.ts
 ```
 
 Run from: `@path scripts/adr-sync-emojis.ts` (relative to this skill's directory)
@@ -258,7 +258,7 @@ Fetch an ADR and start a sub-agent review for architectural quality.
 
 1. **Fetch the ADR content**:
    ```bash
-   npx tsx scripts/confluence-get.ts <pageId>
+   bunx tsx scripts/confluence-get.ts <pageId>
    ```
 
 2. **Delegate to a review sub-agent** using `task()` with the following prompt structure:

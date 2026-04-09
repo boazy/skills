@@ -31,6 +31,13 @@
         "SKILL.md",
         "docs/message-formatting.md"
       ]
+    },
+    {
+      "name": "deep-wiki",
+      "description": "Search and read AI-generated documentation for any public GitHub repository. Use when asked about how an open-source library works, its architecture, API, or internals.",
+      "files": [
+        "SKILL.md"
+      ]
     }
   ]
 }
