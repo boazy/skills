@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "adr",
+      "type": "skill-md",
+      "description": "Manage Architecture Decision Records (ADRs) in Confluence \u2014 create new ADRs from template, update existing ones, generate status reports, sync status emojis, and review ADRs for quality. Use when ADR, architecture decision, or design record is mentioned.",
+      "url": "/skills/adr/SKILL.md",
+      "digest": "sha256:2005e34f1d34ac571cf1011fc4585c80d148f66e64c11be7f093e06138a21a67"
+    },
+    {
+      "name": "deep-wiki",
+      "type": "skill-md",
+      "description": "Search and read AI-generated documentation for any public GitHub repository. Use when asked about how an open-source library works, its architecture, API, or internals.",
+      "url": "/skills/deep-wiki/SKILL.md",
+      "digest": "sha256:c67696742fadcc676b8ca647e6e6625cc03fce1a52f49202c882b6f210b0bdcd"
+    },
+    {
+      "name": "self-contained-python-scripts",
+      "type": "skill-md",
+      "description": "Create self-contained Python scripts that run with `uv run --script`. Covers PEP 723\ninline metadata, ergonomic CLI design (argparse / Cyclopts), rich output formatting,\nprogress bars (alive-progress), interactive prompts (questionary), and fuzzy selection\n(iterfzf). Use when asked to create a Python script, CLI tool, or automation script.\n",
+      "url": "/skills/self-contained-python-scripts/SKILL.md",
+      "digest": "sha256:8d879b675ab00a9e57a41edbcd1a0e61bb1d234d07775266f79c235b06ae9d8a"
+    },
+    {
+      "name": "d2-diagrams",
+      "type": "skill-md",
+      "description": "Generate diagrams from declarative text using D2 - modern text-to-diagram language with\nautomatic layouts, themes, and advanced styling. Use when creating architecture diagrams,\nflowcharts, decision trees, workflow diagrams, sequence flows, or ERDs from text definitions.\n",
+      "url": "/skills/d2-diagrams/SKILL.md",
+      "digest": "sha256:0e0ecb6f9d19ac980db0f2e0c2b099e1fe2bb2ee559af516592bba4b2a2a835b"
+    },
+    {
+      "name": "atlassian",
+      "type": "skill-md",
+      "description": "Interact with Jira and Confluence via REST API - search, create, update issues and pages",
+      "url": "/skills/atlassian/SKILL.md",
+      "digest": "sha256:e110bef74a07648fc476c752d935c6a0eab9e0b33e20fe1f182cbd44b54878f4"
+    },
+    {
+      "name": "slack",
+      "type": "skill-md",
+      "description": "Read channels, DMs, and threads; post and edit messages; search messages and users; add reactions; upload custom emojis \u2014 all via the Slack Web API.",
+      "url": "/skills/slack/SKILL.md",
+      "digest": "sha256:67d445bd73199633c96fb33308b743a32e90250014d81a5c243ca1b2b5bd7675"
+    }
+  ]
+}
