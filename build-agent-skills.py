@@ -2,21 +2,44 @@
 # /// script
 # requires-python = ">=3.9"
 # dependencies = [
+#     "pathspec>=1,<2",
 #     "ruamel.yaml>=0.19.0,<0.20.0",
 # ]
 # ///
 
+"""
+Builds an RFC v0.2.0 compliant agent-skills discovery site.
+
+Reads skill directories from skills/, determines type (skill-md vs archive),
+and writes everything to _site/.well-known/agent-skills/ including:
+  - index.json (discovery index)
+  - SKILL.md files (for skill-md type skills)
+  - .tar.gz archives (for multi-file skills)
+  - .nojekyll (disables Jekyll processing on GitHub Pages)
+"""
+
 import json
 import hashlib
+import shutil
+import tarfile
 from pathlib import Path
+
+import pathspec
 from ruamel.yaml import YAML
 
-# Strict RFC v0.2.0 Configuration
 SKILLS_DIR = Path("skills")
-OUTPUT_DIR = Path(".well-known/agent-skills")
-OUTPUT_FILE = OUTPUT_DIR / "index.json"
+SITE_DIR = Path("_site")
+OUTPUT_DIR = SITE_DIR / ".well-known" / "agent-skills"
 
 yaml = YAML(typ="safe")
+
+gitignore_path = Path(".gitignore")
+if gitignore_path.exists():
+    ignore_spec = pathspec.PathSpec.from_lines(
+        "gitwildmatch", gitignore_path.read_text().splitlines()
+    )
+else:
+    ignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", [])
 
 
 def get_sha256(filepath):
@@ -31,7 +54,6 @@ def parse_frontmatter(content):
     """Extracts and parses YAML frontmatter using ruamel.yaml."""
     lines = content.splitlines()
 
-    # Check if the file actually starts with a frontmatter delimiter
     if not lines or lines[0].strip() != "---":
         return {}
 
@@ -49,32 +71,72 @@ def parse_frontmatter(content):
         parsed_data = yaml.load(yaml_text)
         return parsed_data if isinstance(parsed_data, dict) else {}
     except Exception as e:
-        print(f"Warning: Could not parse YAML frontmatter: {e}")
+        print(f"  Warning: Could not parse YAML frontmatter: {e}")
         return {}
+
+
+def get_skill_files(skill_dir):
+    files = []
+    for path in skill_dir.rglob("*"):
+        if path.is_file() and not ignore_spec.match_file(path.relative_to(Path("."))):
+            files.append(path)
+    return sorted(files)
+
+
+def create_tar_gz(skill_dir, skill_name, files):
+    archive_path = OUTPUT_DIR / f"{skill_name}.tar.gz"
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        for file_path in files:
+            arcname = str(file_path.relative_to(skill_dir))
+            info = tar.gettarinfo(file_path, arcname=arcname)
+            # Normalize ownership for reproducibility
+            info.uid = 0
+            info.gid = 0
+            info.uname = ""
+            info.gname = ""
+            with open(file_path, "rb") as f:
+                tar.addfile(info, f)
+
+    return get_sha256(archive_path)
 
 
 def build_index():
     skills = []
 
-    # Strictly crawl for SKILL.md
-    for path in SKILLS_DIR.rglob("SKILL.md"):
-        content = path.read_text(encoding="utf-8")
+    for skill_md_path in sorted(SKILLS_DIR.rglob("SKILL.md")):
+        skill_dir = skill_md_path.parent
+        content = skill_md_path.read_text(encoding="utf-8")
         meta = parse_frontmatter(content)
 
-        # Fallback to the parent directory name if 'name' isn't in the frontmatter
-        name = meta.get("name", path.parent.name)
+        name = meta.get("name", skill_dir.name)
         description = meta.get("description", "")
+        skill_files = get_skill_files(skill_dir)
 
-        # RFC v0.2.0 single-artifact model format
-        skills.append(
-            {
+        if len(skill_files) == 1:
+            out_path = OUTPUT_DIR / name / "SKILL.md"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(skill_md_path, out_path)
+
+            skills.append({
                 "name": name,
                 "type": "skill-md",
                 "description": description,
-                "url": f"/{path.as_posix()}",
-                "digest": f"sha256:{get_sha256(path)}",
-            }
-        )
+                "url": f"/.well-known/agent-skills/{name}/SKILL.md",
+                "digest": f"sha256:{get_sha256(out_path)}",
+            })
+            print(f"  {name} (skill-md)")
+        else:
+            digest = create_tar_gz(skill_dir, name, skill_files)
+
+            skills.append({
+                "name": name,
+                "type": "archive",
+                "description": description,
+                "url": f"/.well-known/agent-skills/{name}.tar.gz",
+                "digest": f"sha256:{digest}",
+            })
+            print(f"  {name} (archive, {len(skill_files)} files)")
 
     return skills
 
@@ -84,18 +146,24 @@ if __name__ == "__main__":
         print(f"Error: Directory '{SKILLS_DIR}' not found.")
         exit(1)
 
-    # Ensure the .well-known/agent-skills directory exists
+    if SITE_DIR.exists():
+        shutil.rmtree(SITE_DIR)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("Building RFC v0.2.0 skill index...\n")
 
     index_data = {
         "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
         "skills": build_index(),
     }
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    index_path = OUTPUT_DIR / "index.json"
+    with open(index_path, "w", encoding="utf-8") as f:
         json.dump(index_data, f, indent=2)
+        f.write("\n")
 
-    print(
-        f"✅ Successfully built RFC v0.2.0 compliant index for {len(index_data['skills'])} skills at {OUTPUT_FILE}"
-    )
+    # Disable Jekyll processing for GitHub Pages
+    (SITE_DIR / ".nojekyll").touch()
+
+    print(f"\nBuilt {len(index_data['skills'])} skills -> {OUTPUT_DIR}")
 

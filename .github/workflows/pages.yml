@@ -20,23 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: astral-sh/setup-uv@v4
+
       - name: Build site
-        run: |
-          mkdir -p _site/.well-known/skills
-
-          # Copy the index
-          cp .well-known/skills/index.json _site/.well-known/skills/index.json
-
-          # For each skill listed in index.json, copy its declared files
-          for skill_name in $(jq -r '.skills[].name' .well-known/skills/index.json); do
-            for file in $(jq -r --arg s "$skill_name" '.skills[] | select(.name == $s) | .files[]' .well-known/skills/index.json); do
-              mkdir -p "_site/.well-known/skills/${skill_name}/$(dirname "$file")"
-              cp "skills/${skill_name}/${file}" "_site/.well-known/skills/${skill_name}/${file}"
-            done
-          done
-
-          # Disable Jekyll processing
-          touch _site/.nojekyll
+        run: uv run build-agent-skills.py
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
