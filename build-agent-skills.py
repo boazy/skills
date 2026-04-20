@@ -18,6 +18,7 @@ and writes everything to _site/.well-known/agent-skills/ including:
   - .nojekyll (disables Jekyll processing on GitHub Pages)
 """
 
+import argparse
 import json
 import hashlib
 import shutil
@@ -189,7 +190,19 @@ def write_json(path, data):
         f.write("\n")
 
 
+FORMATS = {"v1", "v2"}
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--format",
+        choices=["v1", "v2", "both"],
+        default="v1",
+        dest="fmt",
+    )
+    args = parser.parse_args()
+    formats = FORMATS if args.fmt == "both" else {args.fmt}
+
     if not SKILLS_DIR.exists():
         print(f"Error: Directory '{SKILLS_DIR}' not found.")
         exit(1)
@@ -199,11 +212,15 @@ if __name__ == "__main__":
 
     skills = collect_skills()
 
-    print("Building v0.2.0 index...\n")
-    build_v2(skills)
+    if "v2" in formats:
+        print("Building v0.2.0 index...\n")
+        build_v2(skills)
 
-    print("\nBuilding v0.1.0 compat index...")
-    build_v1_compat(skills)
+    if "v1" in formats:
+        if "v2" in formats:
+            print()
+        print("Building v0.1.0 index...")
+        build_v1_compat(skills)
 
     # Disable Jekyll processing for GitHub Pages
     (SITE_DIR / ".nojekyll").touch()
