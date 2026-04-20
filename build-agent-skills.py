@@ -101,44 +101,92 @@ def create_tar_gz(skill_dir, skill_name, files):
     return get_sha256(archive_path)
 
 
-def build_index():
+def collect_skills():
     skills = []
-
     for skill_md_path in sorted(SKILLS_DIR.rglob("SKILL.md")):
         skill_dir = skill_md_path.parent
         content = skill_md_path.read_text(encoding="utf-8")
         meta = parse_frontmatter(content)
 
-        name = meta.get("name", skill_dir.name)
-        description = meta.get("description", "")
-        skill_files = get_skill_files(skill_dir)
+        skills.append({
+            "name": meta.get("name", skill_dir.name),
+            "description": meta.get("description", ""),
+            "dir": skill_dir,
+            "files": get_skill_files(skill_dir),
+        })
+    return skills
+
+
+def build_v2(skills):
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    entries = []
+
+    for skill in skills:
+        name, skill_files = skill["name"], skill["files"]
 
         if len(skill_files) == 1:
             out_path = OUTPUT_DIR / name / "SKILL.md"
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(skill_md_path, out_path)
+            shutil.copy2(skill_files[0], out_path)
 
-            skills.append({
+            entries.append({
                 "name": name,
                 "type": "skill-md",
-                "description": description,
+                "description": skill["description"],
                 "url": f"/.well-known/agent-skills/{name}/SKILL.md",
                 "digest": f"sha256:{get_sha256(out_path)}",
             })
             print(f"  {name} (skill-md)")
         else:
-            digest = create_tar_gz(skill_dir, name, skill_files)
+            digest = create_tar_gz(skill["dir"], name, skill_files)
 
-            skills.append({
+            entries.append({
                 "name": name,
                 "type": "archive",
-                "description": description,
+                "description": skill["description"],
                 "url": f"/.well-known/agent-skills/{name}.tar.gz",
                 "digest": f"sha256:{digest}",
             })
             print(f"  {name} (archive, {len(skill_files)} files)")
 
-    return skills
+    write_json(OUTPUT_DIR / "index.json", {
+        "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+        "skills": entries,
+    })
+
+
+def build_v1_compat(skills):
+    v1_dir = SITE_DIR / ".well-known" / "skills"
+    v1_dir.mkdir(parents=True, exist_ok=True)
+    entries = []
+
+    for skill in skills:
+        name, skill_dir = skill["name"], skill["dir"]
+        rel_files = []
+
+        for file_path in skill["files"]:
+            rel = file_path.relative_to(skill_dir)
+            dest = v1_dir / name / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file_path, dest)
+            rel_files.append(str(rel))
+
+        entries.append({
+            "name": name,
+            "description": skill["description"],
+            "files": rel_files,
+        })
+
+    write_json(v1_dir / "index.json", {
+        "version": "0.1.0",
+        "skills": entries,
+    })
+
+
+def write_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
 
 
 if __name__ == "__main__":
@@ -148,22 +196,17 @@ if __name__ == "__main__":
 
     if SITE_DIR.exists():
         shutil.rmtree(SITE_DIR)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Building RFC v0.2.0 skill index...\n")
+    skills = collect_skills()
 
-    index_data = {
-        "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
-        "skills": build_index(),
-    }
+    print("Building v0.2.0 index...\n")
+    build_v2(skills)
 
-    index_path = OUTPUT_DIR / "index.json"
-    with open(index_path, "w", encoding="utf-8") as f:
-        json.dump(index_data, f, indent=2)
-        f.write("\n")
+    print("\nBuilding v0.1.0 compat index...")
+    build_v1_compat(skills)
 
     # Disable Jekyll processing for GitHub Pages
     (SITE_DIR / ".nojekyll").touch()
 
-    print(f"\nBuilt {len(index_data['skills'])} skills -> {OUTPUT_DIR}")
+    print(f"\nBuilt {len(skills)} skills -> {SITE_DIR}")
 
