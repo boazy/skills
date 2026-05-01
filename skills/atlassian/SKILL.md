@@ -60,9 +60,24 @@ Example: `bunx tsx scripts/jira-update.ts PROJ-123 '{"status": "In Progress", "a
 # Get comments
 bunx tsx scripts/jira-comment.ts <issueKey> get
 
-# Add comment
-bunx tsx scripts/jira-comment.ts <issueKey> add "<comment text>"
+# Add comment - inline markdown
+bunx tsx scripts/jira-comment.ts <issueKey> add "<markdown text>"
+
+# Add comment - read markdown from a file
+bunx tsx scripts/jira-comment.ts <issueKey> add -f <path>
+
+# Add comment - read markdown from stdin (pipe-friendly)
+cat notes.md | bunx tsx scripts/jira-comment.ts <issueKey> add --stdin
 ```
+
+Comment bodies support full markdown via the same converter used for issue
+descriptions: headings, bold/italic/strike/underline/inline-code, bullet/
+ordered/task lists, fenced code blocks (with language), tables, blockquotes,
+GitHub-style alerts (`> [!NOTE]` etc.), `<details>` expand blocks, footnotes,
+and links.
+
+For long or multi-line comment bodies, prefer `-f <path>` or `--stdin` over
+inline arguments to avoid shell argument-length limits and quoting issues.
 
 #### Upload Attachment
 ```bash
