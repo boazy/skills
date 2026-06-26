@@ -79,6 +79,31 @@ and links.
 For long or multi-line comment bodies, prefer `-f <path>` or `--stdin` over
 inline arguments to avoid shell argument-length limits and quoting issues.
 
+#### Resolve Field Names / IDs
+
+```bash
+bunx tsx scripts/jira-fields.ts [filter]
+```
+Examples:
+- `bunx tsx scripts/jira-fields.ts` (list every field)
+- `bunx tsx scripts/jira-fields.ts "story points"` (find a field by name)
+- `bunx tsx scripts/jira-fields.ts customfield_10023` (resolve an ID back to its name)
+
+Returns JSON: `{ count, fields: [{ id, name, custom, type, customType }] }`.
+
+**Custom field ID rule (MANDATORY):** Jira custom field IDs (e.g.
+`customfield_10023`) are **instance-specific** — the same ID maps to different
+fields on different Jira sites, and an unexplained ID is unverifiable by anyone
+reading your output. Therefore:
+
+1. **Never hardcode or copy a `customfield_*` ID without first resolving its
+   name** for the current instance via `jira-fields.ts`.
+2. When you set custom fields on an issue, **include an ID → name mapping table**
+   in your response so the user can confirm each field is correct (e.g.
+   `customfield_10023 → "Story Points"`).
+3. If you are unsure which ID corresponds to a field name the user mentioned,
+   resolve it first (`jira-fields.ts "<name>"`) instead of guessing.
+
 #### Upload Attachment
 ```bash
 bunx tsx scripts/jira-attachment.ts <issueKey> <filePath> [fileName]
