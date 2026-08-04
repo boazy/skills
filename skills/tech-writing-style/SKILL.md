@@ -42,6 +42,7 @@ Run this pass first because every later edit depends on it.
 - Verify quotations and attributed claims against an available source.
 - Narrow, cite, flag, or remove claims that the source does not support.
 - Qualify a load-bearing use of `current`, `new`, or `today` with a version or date.
+- Check requirements, exceptions, and acceptance criteria for contradictions. If the source does not establish the intended rule, flag the conflict instead of choosing one silently.
 
 When evidence is unavailable, state what needs verification. A fluent rewrite cannot repair an integrity failure.
 
@@ -95,6 +96,10 @@ Keep an em dash for a genuine break or interruption. Keep a semicolon when it cl
 - Introduce a list or table with enough context.
 - Keep list items parallel in grammar and logical category.
 - Keep a short inline series when converting it would fragment ordinary prose.
+- Begin each action item with a concrete verb and object. The opening line should identify the required change without relying on the supporting text.
+- Give each top-level action item one outcome. When that outcome requires several distinct changes, put them in nested bullets or separate sections. Do not hide a second list of actions in semicolon-separated prose.
+- Keep established technical terms when they add precision. Do not use jargon, a metaphor, or a slogan as an action label when it does not identify what must change.
+- For an override or exception, state where it is permitted and where it is prohibited. Use the same rule wherever the document describes requirements, checks, or acceptance criteria.
 - Give each paragraph one topic and state that topic early.
 - Review a paragraph longer than roughly 120 words for a useful split.
 - Combine a run of thin one-sentence paragraphs when they form one explanation.
@@ -153,6 +158,32 @@ The revision separates the condition, action, and consequence. It replaces the v
 
 The list exposes five actions and keeps them parallel.
 
+### Action items
+
+**Before:**
+
+- **Configuration hardening**: require the service URL; reject invalid timeouts; stop startup when validation fails.
+- **Development escape hatch**: permit `SKIP_CONFIG_CHECKS=true`; emit a warning when active; prevent its use in production.
+- **Deploy-time assertion**: CI checks that production configuration is valid or acknowledges the override.
+
+**After:**
+
+- Validate service configuration at startup
+  - Reject a missing service URL.
+  - Reject a timeout of less than one second.
+  - Stop startup when validation fails.
+
+- Restrict `SKIP_CONFIG_CHECKS` to development
+  - Emit a warning at startup when the override is active.
+  - Reject the override in production configuration.
+
+- Add CI checks for production configuration
+  - Fail when the service URL is missing.
+  - Fail when the timeout is invalid.
+  - Fail when `SKIP_CONFIG_CHECKS` is enabled.
+
+The revision replaces vague labels with concrete actions, exposes the subordinate work, and applies one consistent rule to the override.
+
 ### Formulaic contrast
 
 **Before:** The scheduler is not just faster; it is smarter, not reactive. It is not only a queue but a foundation for scale.
@@ -203,12 +234,15 @@ Before returning prose, check:
 1. Does every sentence have one clear job?
 2. Can the reader identify actors, conditions, and consequences?
 3. Are terms defined and used consistently?
-4. Should any embedded series become a list or table?
-5. Is punctuation carrying too many clauses?
-6. Did a contrast slogan, canned transition, recap, or promotional phrase survive without a purpose?
-7. Does each paragraph have one topic and a useful opening sentence?
-8. Are all quotations, attributions, facts, and measurements supported?
-9. Did the edit preserve uncertainty, normative strength, and exact technical tokens?
-10. Does the result sound natural when read aloud?
+4. Does each action item name a concrete change?
+5. Are subordinate actions visible as nested items or sections instead of being hidden in prose?
+6. Do requirements, exceptions, and acceptance criteria agree?
+7. Should any embedded series become a list or table?
+8. Is punctuation carrying too many clauses?
+9. Did a contrast slogan, canned transition, recap, or promotional phrase survive without a purpose?
+10. Does each paragraph have one topic and a useful opening sentence?
+11. Are all quotations, attributions, facts, and measurements supported?
+12. Did the edit preserve uncertainty, normative strength, and exact technical tokens?
+13. Does the result sound natural when read aloud?
 
 Run this check silently. Print it only when the user asks for the review method.
