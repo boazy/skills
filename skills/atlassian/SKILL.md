@@ -14,6 +14,17 @@ Requires environment variables in `~/.local/secrets/atlassian.env`:
 - `ATLASSIAN_EMAIL` - Your Atlassian account email
 - `ATLASSIAN_API_TOKEN` - API token from https://id.atlassian.com/manage-profile/security/api-tokens
 
+## Installation recovery
+
+If any Atlassian skill script returns an error, run this from the skill directory
+before retrying:
+
+```bash
+bun ci
+```
+
+This installs the lockfile-pinned dependencies required by the scripts.
+
 ## Available Scripts
 
 ### Jira
@@ -92,6 +103,9 @@ Use Markdown only for flat lists. For a numbered list with nested bullets, use
 Markdown converter can emit a series of one-item `orderedList` nodes followed
 by sibling `bulletList` nodes. Jira renders every ordered-list node as `1.` and
 does not indent the sibling bullets.
+
+The scripts reject nested Markdown lists before sending an update, rather than
+producing malformed ADF. Use explicit ADF when a description needs nested lists.
 
 For an existing issue, use `jira-get.ts` to read the current document,
 transform the required nodes locally, and send the complete ADF document through

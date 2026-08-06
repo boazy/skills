@@ -335,6 +335,7 @@ export interface JiraAdfDocument extends Record<string, unknown> {
   content: AdfNode[];
 }
 
+
 export function descriptionToAdf(
   description: string | JiraAdfDocument,
   descriptionFormat: JiraDescriptionFormat = "markdown",
@@ -342,6 +343,12 @@ export function descriptionToAdf(
   if (descriptionFormat === "markdown") {
     if (typeof description !== "string") {
       return exitWithError("description must be a string when descriptionFormat is \"markdown\"");
+    }
+
+    if (/^(?: {2,}|\t+)(?:[-*]|\d+\.)\s+\S/m.test(description)) {
+      return exitWithError(
+        "nested Markdown lists are unsupported; use descriptionFormat: \"adf\" for nested lists",
+      );
     }
 
     return markdownToAdf(description);
