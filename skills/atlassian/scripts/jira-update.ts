@@ -1,4 +1,14 @@
-import { jiraGet, jiraPut, jiraPost, exitWithError, output, parseJsonArg, markdownToAdf } from "./lib/atlassian.ts";
+import {
+  jiraGet,
+  jiraPut,
+  jiraPost,
+  exitWithError,
+  output,
+  parseJsonArg,
+  descriptionToAdf,
+  type JiraAdfDocument,
+  type JiraDescriptionFormat,
+} from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -6,7 +16,8 @@ import { jiraGet, jiraPut, jiraPost, exitWithError, output, parseJsonArg, markdo
 
 interface UpdateInput {
   summary?: string;
-  description?: string;
+  description?: string | JiraAdfDocument | null;
+  descriptionFormat?: JiraDescriptionFormat;
   priority?: string;
   assignee?: string;
   labels?: string[];
@@ -39,9 +50,10 @@ Arguments:
   JSON        Updates as JSON object
 
 Updatable fields:
-  summary       New issue title
-  description   New description
-  priority      Priority name (e.g., "High")
+  summary             New issue title
+  description         New description
+  priority            Priority name (e.g., "High")
+  descriptionFormat   "markdown" (default) or "adf"
   assignee      Assignee account ID or email
   labels        Array of labels (replaces existing)
   duedate       Due date (YYYY-MM-DD) or null to clear
@@ -106,9 +118,9 @@ async function main() {
   }
 
   if (updates.description !== undefined) {
-    fields.description = updates.description
-      ? markdownToAdf(updates.description)
-      : null;
+    fields.description = updates.description === null
+      ? null
+      : descriptionToAdf(updates.description, updates.descriptionFormat);
   }
 
   if (updates.priority !== undefined) {

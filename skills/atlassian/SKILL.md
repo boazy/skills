@@ -55,6 +55,100 @@ bunx tsx scripts/jira-update.ts <issueKey> '<JSON updates>'
 ```
 Example: `bunx tsx scripts/jira-update.ts PROJ-123 '{"status": "In Progress", "assignee": "user@example.com"}'`
 
+Description payloads accept `descriptionFormat`:
+
+- `"markdown"` is the default. `description` must be a string and the scripts
+  convert it to ADF.
+- `"adf"` sends a version-1 ADF document as `description` without conversion.
+  Use it for complex structures such as nested lists, panels, and inline cards.
+
+Both `jira-create.ts` and `jira-update.ts` support the field. For a non-trivial
+ADF payload, write the JSON to a file:
+
+```json
+{
+  "descriptionFormat": "adf",
+  "description": {
+    "type": "doc",
+    "version": 1,
+    "content": []
+  }
+}
+```
+
+```bash
+bunx tsx scripts/jira-update.ts PROJ-123 @/tmp/issue-update.json
+```
+
+Jira replaces the whole description document on update; it does not patch
+individual ADF nodes. Read the issue first, transform the affected nodes
+locally, then send the complete `description` document in the update payload.
+Never replace the document with a partial ADF fragment.
+
+#### Jira Description Lists
+
+Use Markdown only for flat lists. For a numbered list with nested bullets, use
+`descriptionFormat: "adf"` with `jira-create.ts` or `jira-update.ts`. The
+Markdown converter can emit a series of one-item `orderedList` nodes followed
+by sibling `bulletList` nodes. Jira renders every ordered-list node as `1.` and
+does not indent the sibling bullets.
+
+For an existing issue, use `jira-get.ts` to read the current document,
+transform the required nodes locally, and send the complete ADF document through
+`jira-update.ts`. Jira does not support a partial-node description update.
+
+```json
+{
+  "type": "orderedList",
+  "attrs": { "order": 1 },
+  "content": [
+    {
+      "type": "listItem",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "Derive signing keys." }]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [{ "type": "text", "text": "Derive from the master key." }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "listItem",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "Add key discovery." }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The invariants are:
+
+- One logical numbered sequence is one `orderedList` node with every top-level
+  item in its `content` array. Do not create one `orderedList` per item.
+- A subordinate `bulletList` is a child of its parent `listItem`, after that
+  item's paragraph. Do not place it beside the `orderedList` as a top-level
+  sibling.
+- Read the issue back after updating it. Confirm the sequence is one ordered
+  list with the expected item count and that each subordinate bullet list is
+  nested under its parent item.
+
 #### Comments
 ```bash
 # Get comments

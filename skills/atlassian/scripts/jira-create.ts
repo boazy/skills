@@ -1,4 +1,14 @@
-import { jiraGet, jiraPost, exitWithError, output, parseJsonArg, getSiteUrl, markdownToAdf } from "./lib/atlassian.ts";
+import {
+  jiraGet,
+  jiraPost,
+  exitWithError,
+  output,
+  parseJsonArg,
+  getSiteUrl,
+  descriptionToAdf,
+  type JiraAdfDocument,
+  type JiraDescriptionFormat,
+} from "./lib/atlassian.ts";
 
 // ============================================================================
 // Types
@@ -8,7 +18,8 @@ interface CreateIssueInput {
   project: string;
   type: string;
   summary: string;
-  description?: string;
+  description?: string | JiraAdfDocument;
+  descriptionFormat?: JiraDescriptionFormat;
   priority?: string;
   assignee?: string;
   labels?: string[];
@@ -54,6 +65,7 @@ Required fields:
 
 Optional fields:
   description Issue description
+  descriptionFormat "markdown" (default) or "adf"
   priority    Priority name (e.g., "High", "Medium", "Low")
   assignee    Assignee email or account ID
   labels      Array of labels
@@ -124,8 +136,8 @@ async function createSingleIssue(input: CreateIssueInput): Promise<{ key: string
     summary: input.summary,
   };
 
-  if (input.description) {
-    fields.description = markdownToAdf(input.description);
+  if (input.description !== undefined) {
+    fields.description = descriptionToAdf(input.description, input.descriptionFormat);
   }
 
   if (input.priority) {

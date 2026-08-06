@@ -327,6 +327,42 @@ type AdfMark =
 type AdfTextNode = { type: "text"; text: string; marks?: AdfMark[] };
 type AdfNode = Record<string, unknown>;
 
+export type JiraDescriptionFormat = "markdown" | "adf";
+
+export interface JiraAdfDocument extends Record<string, unknown> {
+  type: "doc";
+  version: 1;
+  content: AdfNode[];
+}
+
+export function descriptionToAdf(
+  description: string | JiraAdfDocument,
+  descriptionFormat: JiraDescriptionFormat = "markdown",
+): AdfNode {
+  if (descriptionFormat === "markdown") {
+    if (typeof description !== "string") {
+      return exitWithError("description must be a string when descriptionFormat is \"markdown\"");
+    }
+
+    return markdownToAdf(description);
+  }
+
+  if (
+    descriptionFormat === "adf" &&
+    typeof description === "object" &&
+    description !== null &&
+    description.type === "doc" &&
+    description.version === 1 &&
+    Array.isArray(description.content)
+  ) {
+    return description;
+  }
+
+  return exitWithError(
+    "descriptionFormat must be \"markdown\" or \"adf\"; ADF descriptions must be a version 1 document",
+  );
+}
+
 function textNode(text: string): AdfTextNode {
   return { type: "text", text };
 }
