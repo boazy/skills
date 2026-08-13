@@ -87,6 +87,36 @@ ADF payload, write the JSON to a file:
 }
 ```
 
+#### Writing ADF Text
+
+`descriptionFormat: "adf"` bypasses the Markdown converter. The scripts send
+each ADF `text` value unchanged, so Markdown delimiters render as literal
+characters.
+
+When writing ADF, MUST NOT place Markdown syntax in a `text` value. For
+example, `` `command` ``, `**bold**`, and `[label](https://example.com)` are
+literal text, not formatting. Use ADF nodes and marks instead:
+
+```json
+{
+  "type": "paragraph",
+  "content": [
+    { "type": "text", "text": "Run " },
+    {
+      "type": "text",
+      "text": "command",
+      "marks": [{ "type": "code" }]
+    }
+  ]
+}
+```
+
+Use `marks` for inline formatting (`code`, `strong`, `em`, `strike`,
+`underline`, and `link`). Use structural ADF nodes such as `heading`,
+`bulletList`, `orderedList`, and `codeBlock` for block formatting. If the
+source content is Markdown, omit `descriptionFormat` or set it to
+`"markdown"` so the converter creates the ADF document.
+
 ```bash
 bunx tsx scripts/jira-update.ts PROJ-123 @/tmp/issue-update.json
 ```
