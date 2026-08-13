@@ -1,4 +1,6 @@
 import { config } from "dotenv";
+import { randomUUID } from "crypto";
+
 import { readFileSync } from "fs";
 import { readFile } from "fs/promises";
 import { basename, resolve } from "path";
@@ -498,10 +500,15 @@ function flushTaskList(taskItems: Array<{ done: boolean; text: string }>, conten
   }
 
   content.push({
-    type: "bulletList",
+    type: "taskList",
+    attrs: { localId: randomUUID() },
     content: taskItems.map((item) => ({
-      type: "listItem",
-      content: [paragraphNode(`${item.done ? "[x]" : "[ ]"} ${item.text}`)],
+      type: "taskItem",
+      attrs: {
+        localId: randomUUID(),
+        state: item.done ? "DONE" : "TODO",
+      },
+      content: parseInlineMarkdown(item.text),
     })),
   });
 
