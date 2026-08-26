@@ -41,7 +41,7 @@ Run this pass first because every later edit depends on it.
 - Never invent a definition, metric, example result, citation, quotation, consensus, or causal explanation.
 - Verify quotations and attributed claims against an available source.
 - Narrow, cite, flag, or remove claims that the source does not support.
-- Qualify a load-bearing use of `current`, `new`, or `today` with a version or date.
+- Qualify `current`, `new`, or `today` with a version or date when the claim's accuracy depends on time.
 - Check requirements, exceptions, and acceptance criteria for contradictions. If the source does not establish the intended rule, flag the conflict instead of choosing one silently.
 
 When evidence is unavailable, state what needs verification. A fluent rewrite cannot repair an integrity failure.
@@ -50,7 +50,7 @@ When evidence is unavailable, state what needs verification. A fluent rewrite ca
 
 - Infer the likely reader from the request and the existing document.
 - Define or link an unfamiliar term at its first point of need.
-- Prefer an established technical term or a literal description. Do not coin a label, nonce compound, taxonomy, or unusual sense of an ordinary word when established language already expresses the idea. Preserve a project-specific term when the source defines it.
+- Prefer established technical terms or literal descriptions. When established language already expresses the idea, do not invent a competing label or classification or give an ordinary word an unusual meaning. Preserve project-specific terms that the source defines.
 - Spell out an unfamiliar acronym at first use when the acronym recurs enough to help.
 - Do not create an acronym used only a few times.
 - Use one term for one concept. Do not rotate synonyms for variety.
@@ -69,7 +69,8 @@ Use information structure, not sentence length alone, as the main test.
 - Keep clauses together when their grammatical relationship conveys necessary logic.
 - Put an applicable condition before its instruction.
 - Replace noun-heavy abstractions with actors and verbs when the process itself is not the topic.
-- Do not make prose shorter by removing words needed to express relationships among retained claims. Avoid telegraphic shorthand, compressed labels, and dense noun phrases that hide the actor, action, condition, or consequence. Remove repetition or optional supporting detail instead. Keep compact labels in tables, diagrams, logs, and interfaces when the format makes their meaning clear.
+- Preserve words that express relationships among claims. To shorten prose, remove repetition or optional supporting detail instead.
+- Replace telegraphic shorthand, compressed labels, and dense noun phrases when they hide the actor, action, condition, or consequence. Keep compact labels in tables, diagrams, logs, and interfaces when the format makes their meaning clear.
 - Replace a generic participial tail such as `..., improving reliability` with a testable mechanism or consequence.
 - Remove filler, empty intensifiers, and unsupported promotional adjectives.
 - Vary cadence only when meaning benefits. Avoid both fragment chains and a series of identical short sentences.
@@ -85,7 +86,7 @@ Treat these patterns as review warnings:
 - More than one em dash in a paragraph.
 - Two or more semicolons in one sentence.
 - Three or more comma-separated items in prose.
-- Nested or load-bearing parenthetical content.
+- A parenthetical that carries a condition or explanation required to understand the sentence.
 
 When a warning fires, inspect the logic. Use separate sentences, a precise conjunction, a colon, a list, or a table when that form exposes the relationship better.
 
@@ -107,7 +108,7 @@ Keep an em dash for a genuine break or interruption. Keep a semicolon when it cl
 - In an abstract, summary, status section, or section that answers a specific question, state the result, decision, or outcome before process narration and supporting detail. Include a caveat when it changes correctness, scope, risk, interpretation, or the reader's next action. Place the caveat beside the claim it qualifies.
 - Give each paragraph one topic and state that topic early.
 - Separate the main claim, decision, or requirement from lower-priority implementation detail. Remove irrelevant detail. Move necessary supporting material into a subordinate paragraph, list, section, note, appendix, or linked reference, while keeping enough context for the main claim to stand alone.
-- Give each material claim, feature, or decision one primary location. Do not distribute unrelated slices of one explanation across several sections or repeatedly explain the same point. Use a short cross-reference when another section needs the context, and repeat information only when the local reader needs it or a warning requires it.
+- Give each material claim, feature, or decision one primary location. Keep the parts of one explanation together instead of scattering them across sections or repeating the same point. Use a short cross-reference when another section needs the context, and repeat information only when local readers need it or a warning requires it.
 - Review a paragraph longer than roughly 120 words for a useful split.
 - Combine a run of thin one-sentence paragraphs when they form one explanation.
 - Use descriptive headings with a valid hierarchy.
@@ -124,7 +125,8 @@ Use these patterns only as editing prompts. Context, repetition, and reader harm
 | Pattern to inspect | Reader risk | Preferred revision | Legitimate use |
 |---|---|---|---|
 | Repeated `X, not Y`, `not just`, `not only`, or `rather than` frames | Manufactured contrast implies a misconception and creates a slogan-like cadence. | State the mechanism or result directly. | Keep a contrast when the rejected alternative is real and salient. |
-| Novel, mixed, or semantically mismatched metaphors, aphorisms, or slogans | Figurative language can require decoding, imply a false relationship, or look like technical terminology. | State the literal mechanism, condition, or consequence. | Keep a familiar metaphor when it fits the subject, the audience will understand it, and it makes the explanation clearer. |
+| Unfamiliar, mixed, or misleading metaphors | A metaphor can require decoding, imply a false relationship, or look like technical terminology. | State the literal mechanism, condition, or consequence. | Keep a familiar metaphor when it fits the subject, the audience will understand it, and it makes the explanation clearer. |
+| Aphorisms or slogans used in place of an explanation | Memorable phrasing can obscure or restate a claim without supporting it. | State the underlying claim or mechanism directly. | Keep one when the genre permits it and the intended meaning is clear. |
 | Canned transitions, stage directions, and importance markers, such as `Additionally`, `In conclusion`, `It is important to note`, `the point is`, `this matters`, `this is the critical detail`, or `which is exactly why` | Empty signposting and unsupported declarations of importance delay the claim and hide the actual relationship or consequence. | Delete the marker. State the claim directly, or name the precise logical, temporal, or causal relationship. | Keep a transition that expresses a real relationship and a priority label that defines operational severity or ordering. |
 | Repetitive conclusions | A recap that restates preceding material delays useful information. | Delete the recap. | Keep a conclusion that synthesizes implications, records a decision, or gives a next action. |
 | Inflated or promotional language, such as `seamless`, `robust`, `transformative`, or `pivotal` | Praise substitutes for testable information. | State the mechanism, scope, comparison, or evidence. | A requested persuasive genre may use persuasive tone, but its technical claims still need support. |
@@ -245,7 +247,7 @@ Before returning prose, check:
 4. Does each action item name a concrete change?
 5. Are subordinate actions visible as nested items or sections, and are constrained structures free of clause-heavy entries?
 6. Do requirements, exceptions, and acceptance criteria agree?
-7. Should any embedded series or dense table cell become a list, table, or separate section?
+7. Should an embedded series become a list or table? Should content in a dense table cell be formatted as a list within the cell, split across rows or columns, or moved to a separate section?
 8. Is punctuation carrying too many clauses?
 9. Did a contrast slogan, canned transition, importance marker, recap, promotional phrase, or unclear metaphor survive without a purpose?
 10. Does each paragraph have one topic and a useful opening sentence? Is each core claim separated from lower-priority detail and given one primary location?
