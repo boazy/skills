@@ -1,6 +1,6 @@
 ---
 name: tech-writing-style
-description: Write, rewrite, or review technical prose for clarity and human readability. Applies Google technical-writing guidance and checks language-model drafts for overloaded sentences, punctuation-heavy clause chains, inline-list overload, unexplained terminology, formulaic contrast, canned transitions, unsupported claims, and repetitive rhetoric. Use for technical writing of any content type, including work governed by another documentation skill.
+description: Write, rewrite, or review technical prose for clarity and human readability. Applies Google technical-writing guidance and checks language-model drafts for opaque compression, invented or semantically stretched terminology, unnecessary figurative language, overloaded sentences, punctuation-heavy clause chains, inline-list overload, formulaic contrast, canned transitions, unsupported claims, and repetitive rhetoric. Use for technical writing of any content type, including work governed by another documentation skill.
 ---
 
 # Technical writing style
@@ -50,10 +50,12 @@ When evidence is unavailable, state what needs verification. A fluent rewrite ca
 
 - Infer the likely reader from the request and the existing document.
 - Define or link an unfamiliar term at its first point of need.
+- Prefer an established technical term or a literal description. Do not coin a label, nonce compound, taxonomy, or unusual sense of an ordinary word when established language already expresses the idea. Preserve a project-specific term when the source defines it.
 - Spell out an unfamiliar acronym at first use when the acronym recurs enough to help.
 - Do not create an acronym used only a few times.
 - Use one term for one concept. Do not rotate synonyms for variety.
 - Clarify ambiguous pronouns, especially bare `this`, `that`, `it`, or `they` after multiple possible referents.
+- Do not assume the reader shares an unstated referent. Introduce the specific object before shorthand such as `the fix`, `the risk`, `the tail`, or `the ask`. Keep a definite description when preceding context identifies one unique referent.
 - Keep specialist terms that the audience expects. Do not replace precision with a vague plain-language substitute.
 
 ## 4. Sentence and clause pass
@@ -67,6 +69,7 @@ Use information structure, not sentence length alone, as the main test.
 - Keep clauses together when their grammatical relationship conveys necessary logic.
 - Put an applicable condition before its instruction.
 - Replace noun-heavy abstractions with actors and verbs when the process itself is not the topic.
+- Do not make prose shorter by removing words needed to express relationships among retained claims. Avoid telegraphic shorthand, compressed labels, and dense noun phrases that hide the actor, action, condition, or consequence. Remove repetition or optional supporting detail instead. Keep compact labels in tables, diagrams, logs, and interfaces when the format makes their meaning clear.
 - Replace a generic participial tail such as `..., improving reliability` with a testable mechanism or consequence.
 - Remove filler, empty intensifiers, and unsupported promotional adjectives.
 - Vary cadence only when meaning benefits. Avoid both fragment chains and a series of identical short sentences.
@@ -98,9 +101,13 @@ Keep an em dash for a genuine break or interruption. Keep a semicolon when it cl
 - Keep a short inline series when converting it would fragment ordinary prose.
 - Begin each action item with a concrete verb and object. The opening line should identify the required change without relying on the supporting text.
 - Give each top-level action item one outcome. When that outcome requires several distinct changes, put them in nested bullets or separate sections. Do not hide a second list of actions in semicolon-separated prose.
+- Apply stricter density limits to table cells, list items, callouts, and other constrained structures than to body paragraphs. Do not place several independent claims or a clause-heavy paragraph inside one container. Split the content into sub-items, rows, columns, or a separate section when that structure improves scanning.
 - Keep established technical terms when they add precision. Do not use jargon, a metaphor, or a slogan as an action label when it does not identify what must change.
 - For an override or exception, state where it is permitted and where it is prohibited. Use the same rule wherever the document describes requirements, checks, or acceptance criteria.
+- In an abstract, summary, status section, or section that answers a specific question, state the result, decision, or outcome before process narration and supporting detail. Include a caveat when it changes correctness, scope, risk, interpretation, or the reader's next action. Place the caveat beside the claim it qualifies.
 - Give each paragraph one topic and state that topic early.
+- Separate the main claim, decision, or requirement from lower-priority implementation detail. Remove irrelevant detail. Move necessary supporting material into a subordinate paragraph, list, section, note, appendix, or linked reference, while keeping enough context for the main claim to stand alone.
+- Give each material claim, feature, or decision one primary location. Do not distribute unrelated slices of one explanation across several sections or repeatedly explain the same point. Use a short cross-reference when another section needs the context, and repeat information only when the local reader needs it or a warning requires it.
 - Review a paragraph longer than roughly 120 words for a useful split.
 - Combine a run of thin one-sentence paragraphs when they form one explanation.
 - Use descriptive headings with a valid hierarchy.
@@ -117,7 +124,8 @@ Use these patterns only as editing prompts. Context, repetition, and reader harm
 | Pattern to inspect | Reader risk | Preferred revision | Legitimate use |
 |---|---|---|---|
 | Repeated `X, not Y`, `not just`, `not only`, or `rather than` frames | Manufactured contrast implies a misconception and creates a slogan-like cadence. | State the mechanism or result directly. | Keep a contrast when the rejected alternative is real and salient. |
-| Canned transitions and stage directions, such as `Additionally`, `Moreover`, `In conclusion`, `It is important to note`, `let's explore`, `as you can see`, or `this section will` | Empty signposting delays the point and hides the actual relationship. | Delete it or name the relationship with a precise transition such as `because`, `however`, or `after`. | Keep a transition that expresses a real logical or temporal relationship. |
+| Novel, mixed, or semantically mismatched metaphors, aphorisms, or slogans | Figurative language can require decoding, imply a false relationship, or look like technical terminology. | State the literal mechanism, condition, or consequence. | Keep a familiar metaphor when it fits the subject, the audience will understand it, and it makes the explanation clearer. |
+| Canned transitions, stage directions, and importance markers, such as `Additionally`, `In conclusion`, `It is important to note`, `the point is`, `this matters`, `this is the critical detail`, or `which is exactly why` | Empty signposting and unsupported declarations of importance delay the claim and hide the actual relationship or consequence. | Delete the marker. State the claim directly, or name the precise logical, temporal, or causal relationship. | Keep a transition that expresses a real relationship and a priority label that defines operational severity or ordering. |
 | Repetitive conclusions | A recap that restates preceding material delays useful information. | Delete the recap. | Keep a conclusion that synthesizes implications, records a decision, or gives a next action. |
 | Inflated or promotional language, such as `seamless`, `robust`, `transformative`, or `pivotal` | Praise substitutes for testable information. | State the mechanism, scope, comparison, or evidence. | A requested persuasive genre may use persuasive tone, but its technical claims still need support. |
 | Hedging and intensifier stacks | Vague strength and stacked uncertainty conceal confidence and scope. | Tie uncertainty to a reason, condition, interval, or missing test. Use measurements when the source provides them. | Preserve a hedge that accurately bounds incomplete evidence. |
@@ -232,17 +240,18 @@ The em dash marks a concise break. The semicolon joins two branches of the same 
 Before returning prose, check:
 
 1. Does every sentence have one clear job?
-2. Can the reader identify actors, conditions, and consequences?
-3. Are terms defined and used consistently?
+2. Can the reader identify actors, conditions, consequences, and referents without decoding shorthand or compressed labels?
+3. Are established terms used where possible, and are unfamiliar or project-specific terms defined and used consistently?
 4. Does each action item name a concrete change?
-5. Are subordinate actions visible as nested items or sections instead of being hidden in prose?
+5. Are subordinate actions visible as nested items or sections, and are constrained structures free of clause-heavy entries?
 6. Do requirements, exceptions, and acceptance criteria agree?
-7. Should any embedded series become a list or table?
+7. Should any embedded series or dense table cell become a list, table, or separate section?
 8. Is punctuation carrying too many clauses?
-9. Did a contrast slogan, canned transition, recap, or promotional phrase survive without a purpose?
-10. Does each paragraph have one topic and a useful opening sentence?
+9. Did a contrast slogan, canned transition, importance marker, recap, promotional phrase, or unclear metaphor survive without a purpose?
+10. Does each paragraph have one topic and a useful opening sentence? Is each core claim separated from lower-priority detail and given one primary location?
 11. Are all quotations, attributions, facts, and measurements supported?
 12. Did the edit preserve uncertainty, normative strength, and exact technical tokens?
 13. Does the result sound natural when read aloud?
+14. Do scoped summaries and answer sections state the result before supporting detail and place relevant caveats beside the affected claim?
 
 Run this check silently. Print it only when the user asks for the review method.
