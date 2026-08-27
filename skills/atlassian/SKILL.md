@@ -255,6 +255,13 @@ Image embedding note:
 - External image URLs fall back to a clickable link to avoid Jira `INVALID_INPUT` errors.
 - If you want embedded images, upload the file first with `jira-attachment.ts`, then use the returned Atlassian `contentUrl` in your markdown image URL.
 
+#### Delete Attachment
+```bash
+bunx tsx scripts/jira-delete-attachment.ts <attachmentId>
+```
+Example:
+- `bunx tsx scripts/jira-delete-attachment.ts 251415`
+
 ### Confluence
 
 #### Personal Space

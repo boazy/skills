@@ -161,6 +161,14 @@ export async function jiraPut<T>(
   });
 }
 
+export async function jiraDelete<T>(
+  endpoint: string
+): Promise<ApiResponse<T>> {
+  const cfg = getConfig();
+  const url = `https://${cfg.site}/rest/api/3/${endpoint}`;
+  return request<T>(url, cfg, { method: "DELETE" });
+}
+
 export async function jiraUploadAttachment<T>(
   issueKey: string,
   filePath: string,
