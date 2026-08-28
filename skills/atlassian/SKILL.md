@@ -25,6 +25,86 @@ bun ci
 
 This installs the lockfile-pinned dependencies required by the scripts.
 
+## Usage Guidelines
+
+Apply these rules on every Jira create, update, or comment, and every
+Confluence create or update.
+
+### Write complex documents in ADF
+
+Jira descriptions accept Markdown (converted to ADF) or a version-1 ADF
+document (`descriptionFormat: "adf"`). The Markdown converter cannot
+represent merged or split cells, cell backgrounds, multiline cell bodies,
+or smart links.
+
+MUST write ADF from the start when the document needs any of:
+
+- Tables with multiline cell content, nested lists or code in a cell,
+  merged/split cells (`colspan` / `rowspan`), or cell backgrounds
+- Nested lists
+- Panels, expands, layouts, or other ADF-only nodes
+- Inline live links or cards to Jira issues or Confluence pages
+
+MAY use Markdown only for short prose: headings, emphasis, flat lists,
+fenced code, and extremely simple one-paragraph tables with no merged
+cells.
+
+If any ADF-only feature is needed, write the full ADF document from the
+start and send it with `descriptionFormat: "adf"` through a JSON file
+(`@/tmp/payload.json`).
+
+Jira comments currently go through the Markdown converter. Keep comments
+simple, and put complex tables in the issue description as ADF.
+
+Confluence page bodies in this skill use storage HTML, which already
+supports complex tables. The ADF-vs-Markdown rule applies to Jira
+descriptions.
+
+### Link Jira issues and Confluence pages
+
+When mentioning another Jira issue or Confluence page, SHOULD turn that
+mention into a hyperlink. A bare issue key (`PROJ-123`) or unlinked page
+title is not enough.
+
+Build the URL from script output (`url` on `jira-get`, `jira-search`,
+`confluence-get`, or `confluence-search`) so the host matches this site.
+
+- Markdown: `[PROJ-123](https://<site>/browse/PROJ-123)` and
+  `[Page title](https://<site>/wiki/...)`
+- Confluence storage HTML:
+  `<a href="https://<site>/browse/PROJ-123">PROJ-123</a>`
+- ADF: an `inlineCard` inside a paragraph, or a standalone `blockCard`,
+  with `attrs.url` set to that URL
+
+Smart links are heavier than a text link. An inline Jira card also
+renders the issue summary and status. In dense places (tables, long key
+lists, repeated mentions in one paragraph), use a text node with a
+`link` mark, or Markdown `[key](url)`. Do not put an `inlineCard` on
+every mention.
+
+### Set Jira issue links when the relationship is clear
+
+Mentioning issue A while creating or editing issue B usually means the
+issues are related. If the relationship is clear, SHOULD also create the
+Jira issue link on B with `jira-link.ts`. A textual mention is not a
+substitute.
+
+The relationship phrase is the inward or outward wording as it should
+read on B:
+
+- B is blocked by A → `add B "is blocked by" A`
+- B blocks A → `add B "blocks" A`
+- B duplicates A → `add B "duplicates" A`
+
+Link type names are instance-specific. Run `jira-link.ts types` and copy
+the inward or outward phrase. List existing links on B first
+(`jira-get.ts` or `jira-link.ts list`) and skip if the same type already
+points at A.
+
+Do not create a link when the mention is incidental or the relationship
+is unclear. Do not guess a type name such as `"Blocks"`; pass the
+phrase.
+
 ## Available Scripts
 
 ### Jira
@@ -45,6 +125,9 @@ See `docs/jql-guide.md` for JQL syntax reference.
 bunx tsx scripts/jira-get.ts <issueKey>
 ```
 Example: `bunx tsx scripts/jira-get.ts PROJ-123`
+
+Returns `url`, the description ADF, and `links` (each relationship phrase
+as it reads on this issue).
 
 #### Create Issue
 ```bash
@@ -69,9 +152,11 @@ Example: `bunx tsx scripts/jira-update.ts PROJ-123 '{"status": "In Progress", "a
 Description payloads accept `descriptionFormat`:
 
 - `"markdown"` is the default. `description` must be a string and the scripts
-  convert it to ADF.
+  convert it to ADF. Use it only for short, simple content. See
+  [Usage Guidelines](#usage-guidelines).
 - `"adf"` sends a version-1 ADF document as `description` without conversion.
-  Use it for complex structures such as nested lists, panels, and inline cards.
+  MUST use it for complex documents: nested lists, complex tables, panels,
+  smart links, and other ADF-only nodes.
 
 Both `jira-create.ts` and `jira-update.ts` support the field. For a non-trivial
 ADF payload, write the JSON to a file:
@@ -113,9 +198,118 @@ literal text, not formatting. Use ADF nodes and marks instead:
 
 Use `marks` for inline formatting (`code`, `strong`, `em`, `strike`,
 `underline`, and `link`). Use structural ADF nodes such as `heading`,
-`bulletList`, `orderedList`, and `codeBlock` for block formatting. If the
-source content is Markdown, omit `descriptionFormat` or set it to
-`"markdown"` so the converter creates the ADF document.
+`bulletList`, `orderedList`, `table`, `inlineCard`, `blockCard`, and
+`codeBlock` for block and smart-link formatting. If the source content is
+simple Markdown, omit `descriptionFormat` or set it to `"markdown"` so the
+converter creates the ADF document. If it needs any ADF-only feature, write
+ADF from the start.
+
+##### ADF tables
+
+Markdown tables are one paragraph per cell, with no colspan, rowspan, or
+background. MUST use ADF for anything richer.
+
+Cell `content` is a block array: multiple paragraphs, lists, or code blocks
+are valid. `tableHeader` / `tableCell` `attrs` include `colspan`, `rowspan`,
+and `background`.
+
+```json
+{
+  "type": "table",
+  "attrs": { "isNumberColumnEnabled": false, "layout": "default" },
+  "content": [
+    {
+      "type": "tableRow",
+      "content": [
+        {
+          "type": "tableHeader",
+          "attrs": { "background": "#deebff" },
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Component" }]
+            }
+          ]
+        },
+        {
+          "type": "tableHeader",
+          "attrs": { "background": "#deebff" },
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Notes" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "tableRow",
+      "content": [
+        {
+          "type": "tableCell",
+          "attrs": { "colspan": 2, "background": "#f4f5f7" },
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Shared across both columns." }]
+            },
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Second paragraph in the same cell." }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+##### ADF smart links
+
+`inlineCard` belongs in a paragraph `content` array. `blockCard` is a
+top-level block. Set `attrs.url` to the browse URL or Confluence page URL
+from script output.
+
+```json
+{
+  "type": "paragraph",
+  "content": [
+    { "type": "text", "text": "Blocked by " },
+    {
+      "type": "inlineCard",
+      "attrs": { "url": "https://yourcompany.atlassian.net/browse/PROJ-123" }
+    },
+    { "type": "text", "text": "." }
+  ]
+}
+```
+
+```json
+{
+  "type": "blockCard",
+  "attrs": {
+    "url": "https://yourcompany.atlassian.net/wiki/spaces/DEV/pages/123456"
+  }
+}
+```
+
+In a dense table of issue keys, use a text node with a `link` mark instead
+of `inlineCard`:
+
+```json
+{
+  "type": "text",
+  "text": "PROJ-123",
+  "marks": [
+    {
+      "type": "link",
+      "attrs": { "href": "https://yourcompany.atlassian.net/browse/PROJ-123" }
+    }
+  ]
+}
+```
 
 ```bash
 bunx tsx scripts/jira-update.ts PROJ-123 @/tmp/issue-update.json
@@ -216,6 +410,31 @@ and links.
 
 For long or multi-line comment bodies, prefer `-f <path>` or `--stdin` over
 inline arguments to avoid shell argument-length limits and quoting issues.
+
+When a comment mentions another Jira issue or Confluence page, SHOULD
+hyperlink it with Markdown (`[PROJ-123](https://<site>/browse/PROJ-123)`).
+Comments cannot send ADF smart links.
+
+#### Issue Links
+
+```bash
+bunx tsx scripts/jira-link.ts types
+bunx tsx scripts/jira-link.ts list <issueKey>
+bunx tsx scripts/jira-link.ts add <issueKey> "<relationship>" <otherIssueKey>
+bunx tsx scripts/jira-link.ts remove <linkId>
+```
+
+`relationship` is the inward or outward phrase as it should read on
+`issueKey`, copied from `types`. Do not pass the type name (`"Blocks"`).
+
+Examples:
+- `bunx tsx scripts/jira-link.ts add PROJ-200 "is blocked by" PROJ-100`
+- `bunx tsx scripts/jira-link.ts add PROJ-200 "blocks" PROJ-100`
+- `bunx tsx scripts/jira-link.ts add PROJ-200 "relates to" PROJ-100`
+
+`jira-get.ts` also returns `links` with the same phrase-on-this-issue
+shape. List before adding. A duplicate of the same type and direction is
+a no-op (`alreadyLinked: true`).
 
 #### Resolve Field Names / IDs
 
@@ -436,3 +655,10 @@ bunx tsx scripts/jira-update.ts PROJ-123 @/tmp/update.json
 2. Search: `bunx tsx scripts/confluence-search.ts "space = <space.key> AND type = page"`
 3. Create: `bunx tsx scripts/confluence-create.ts '{"space": "<space.key>", "title": "My Page", "body": "<p>Content</p>"}'`
 4. Read: `bunx tsx scripts/confluence-get.ts "<page title>" <space.key>`
+
+### Link a related Jira issue
+1. Types: `bunx tsx scripts/jira-link.ts types` → copy the inward/outward phrase
+2. Existing: `bunx tsx scripts/jira-link.ts list PROJ-200`
+3. Add: `bunx tsx scripts/jira-link.ts add PROJ-200 "is blocked by" PROJ-100`
+
+Hyperlink the mention in the description as well. See Usage Guidelines.

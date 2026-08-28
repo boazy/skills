@@ -4,6 +4,21 @@ import { jiraGet, exitWithError, output, getSiteUrl } from "./lib/atlassian.ts";
 // Types
 // ============================================================================
 
+interface LinkedIssue {
+  key: string;
+  fields?: {
+    summary?: string;
+    status?: { name: string };
+  };
+}
+
+interface IssueLink {
+  id: string;
+  type: { name: string; inward: string; outward: string };
+  inwardIssue?: LinkedIssue;
+  outwardIssue?: LinkedIssue;
+}
+
 interface JiraIssue {
   key: string;
   id: string;
@@ -23,6 +38,7 @@ interface JiraIssue {
     fixVersions?: Array<{ name: string }>;
     parent?: { key: string; fields: { summary: string } };
     subtasks?: Array<{ key: string; fields: { summary: string; status: { name: string } } }>;
+    issuelinks?: IssueLink[];
     comment?: { comments: Array<{ author: { displayName: string }; body: unknown; created: string }> };
   };
 }
@@ -47,7 +63,7 @@ Examples:
 
 async function getIssue() {
   const response = await jiraGet<JiraIssue>(`issue/${encodeURIComponent(issueKey)}`, {
-    fields: "summary,description,status,issuetype,priority,assignee,reporter,created,updated,duedate,labels,components,fixVersions,parent,subtasks,comment",
+    fields: "summary,description,status,issuetype,priority,assignee,reporter,created,updated,duedate,labels,components,fixVersions,parent,subtasks,issuelinks,comment",
     expand: "renderedFields",
   });
 
@@ -96,6 +112,30 @@ async function getIssue() {
       summary: s.fields.summary,
       status: s.fields.status.name,
     })),
+    links: (issue.fields.issuelinks || []).flatMap((link) => {
+      const current = issue.key.toUpperCase();
+      if (link.outwardIssue && link.outwardIssue.key.toUpperCase() !== current) {
+        return [{
+          id: link.id,
+          type: link.type.name,
+          relationship: link.type.inward,
+          otherKey: link.outwardIssue.key,
+          otherSummary: link.outwardIssue.fields?.summary ?? null,
+          otherStatus: link.outwardIssue.fields?.status?.name ?? null,
+        }];
+      }
+      if (link.inwardIssue && link.inwardIssue.key.toUpperCase() !== current) {
+        return [{
+          id: link.id,
+          type: link.type.name,
+          relationship: link.type.outward,
+          otherKey: link.inwardIssue.key,
+          otherSummary: link.inwardIssue.fields?.summary ?? null,
+          otherStatus: link.inwardIssue.fields?.status?.name ?? null,
+        }];
+      }
+      return [];
+    }),
     recentComments: (issue.fields.comment?.comments || []).slice(-5).map((c) => ({
       author: c.author.displayName,
       body: c.body,

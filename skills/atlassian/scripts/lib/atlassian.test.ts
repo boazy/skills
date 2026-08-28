@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { descriptionToAdf } from "./atlassian.ts";
+import { descriptionToAdf, resolveIssueLinkRelationship } from "./atlassian.ts";
 
 type AdfDocument = {
   content: Array<{ type: string; content?: unknown[] }>;
@@ -18,6 +18,7 @@ test("converts a flat ordered Markdown list into one ordered ADF list", () => {
 test("converts Markdown task lists into native ADF action items", () => {
   const document = descriptionToAdf("- [ ] Open **work**\n- [x] Completed work") as AdfDocument;
   const taskList = document.content[0] as {
+    type: string;
     attrs?: { localId?: string };
     content?: Array<{
       type: string;
@@ -62,4 +63,53 @@ test("rejects nested Markdown lists before they can produce malformed ADF", () =
     process.exit = originalExit;
     console.error = originalConsoleError;
   }
+});
+
+const linkTypes = [
+  { id: "10000", name: "Blocks", inward: "is blocked by", outward: "blocks" },
+  { id: "10001", name: "Relates", inward: "relates to", outward: "relates to" },
+  { id: "10002", name: "Duplicate", inward: "is duplicated by", outward: "duplicates" },
+];
+
+test("resolves an inward issue-link phrase onto the edited issue", () => {
+  const resolved = resolveIssueLinkRelationship(linkTypes, "is blocked by");
+  assert.equal(resolved.type.name, "Blocks");
+  assert.equal(resolved.fromIsInward, true);
+});
+
+test("resolves an outward issue-link phrase onto the edited issue", () => {
+  const resolved = resolveIssueLinkRelationship(linkTypes, "blocks");
+  assert.equal(resolved.type.name, "Blocks");
+  assert.equal(resolved.fromIsInward, false);
+});
+
+test("treats a symmetric phrase as inward", () => {
+  const resolved = resolveIssueLinkRelationship(linkTypes, "Relates To");
+  assert.equal(resolved.type.name, "Relates");
+  assert.equal(resolved.fromIsInward, true);
+});
+
+test("rejects a link type name so the caller must pick a direction", () => {
+  assert.throws(
+    () => resolveIssueLinkRelationship(linkTypes, "Blocks"),
+    /link type name/,
+  );
+});
+
+test("rejects an unknown relationship and lists available phrases", () => {
+  assert.throws(
+    () => resolveIssueLinkRelationship(linkTypes, "caused by"),
+    /Unknown relationship/,
+  );
+});
+
+test("rejects an ambiguous relationship phrase", () => {
+  const ambiguous = [
+    ...linkTypes,
+    { id: "10003", name: "Also Blocks", inward: "is blocked by", outward: "also blocks" },
+  ];
+  assert.throws(
+    () => resolveIssueLinkRelationship(ambiguous, "is blocked by"),
+    /Ambiguous relationship/,
+  );
 });

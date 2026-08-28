@@ -876,3 +876,84 @@ export function markdownToAdf(markdown: string): AdfNode {
     content: content.length > 0 ? content : [paragraphNode("")],
   };
 }
+
+// ============================================================================
+// Jira issue links
+// ============================================================================
+
+export interface JiraIssueLinkType {
+  id: string;
+  name: string;
+  inward: string;
+  outward: string;
+}
+
+/**
+ * Resolve an inward/outward relationship phrase to a link type and direction.
+ *
+ * `relationship` is the wording as it should read on the issue being edited
+ * (`from`): "is blocked by", "blocks", "relates to". Type names such as
+ * "Blocks" are rejected so the caller must pick a direction.
+ */
+export function resolveIssueLinkRelationship(
+  types: JiraIssueLinkType[],
+  relationship: string,
+): { type: JiraIssueLinkType; fromIsInward: boolean } {
+  const trimmed = relationship.trim();
+  const needle = trimmed.toLowerCase();
+  if (!needle) {
+    throw new Error("relationship is required");
+  }
+
+  const exactName = types.filter((type) => type.name === trimmed);
+  if (exactName.length === 1) {
+    const type = exactName[0];
+    throw new Error(
+      `"${relationship}" is a link type name. Pass the phrase as it should read on the issue you are editing: "${type.inward}" or "${type.outward}".`,
+    );
+  }
+
+  const matches: Array<{ type: JiraIssueLinkType; fromIsInward: boolean }> = [];
+  for (const type of types) {
+    const inward = type.inward.trim().toLowerCase();
+    const outward = type.outward.trim().toLowerCase();
+    if (inward === needle) {
+      matches.push({ type, fromIsInward: true });
+    } else if (outward === needle) {
+      matches.push({ type, fromIsInward: false });
+    }
+  }
+
+  if (matches.length === 1) {
+    return matches[0];
+  }
+
+  if (matches.length > 1) {
+    const detail = matches
+      .map((match) => {
+        const phrase = match.fromIsInward ? match.type.inward : match.type.outward;
+        return `${match.type.name} ("${phrase}")`;
+      })
+      .join(", ");
+    throw new Error(
+      `Ambiguous relationship "${relationship}". Matches: ${detail}. Copy the inward or outward phrase from jira-link.ts types.`,
+    );
+  }
+
+  const nameMatches = types.filter(
+    (type) => type.name.trim().toLowerCase() === needle,
+  );
+  if (nameMatches.length === 1) {
+    const type = nameMatches[0];
+    throw new Error(
+      `"${relationship}" is a link type name. Pass the phrase as it should read on the issue you are editing: "${type.inward}" or "${type.outward}".`,
+    );
+  }
+
+  const available = types
+    .map((type) => `${type.name}: "${type.inward}" | "${type.outward}"`)
+    .join("; ");
+  throw new Error(
+    `Unknown relationship "${relationship}". Available: ${available}`,
+  );
+}
