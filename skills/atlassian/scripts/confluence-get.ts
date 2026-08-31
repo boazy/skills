@@ -134,7 +134,7 @@ async function getPageById(pageId: string) {
   }
 
   const page = response.data!;
-  const siteUrl = getSiteUrl();
+  const siteUrl = getSiteUrl("confluence");
   const space = page.spaceId ? await tryGetSpaceById(page.spaceId) : undefined;
   const properties = await getPageProperties(page.id);
 

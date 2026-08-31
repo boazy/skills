@@ -105,7 +105,7 @@ async function createPage(input: CreatePageInput) {
   }
 
   const data = response.data!;
-  const siteUrl = getSiteUrl();
+  const siteUrl = getSiteUrl("confluence");
 
   output({
     id: data.id,

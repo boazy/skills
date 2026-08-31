@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { descriptionToAdf, resolveIssueLinkRelationship } from "./atlassian.ts";
+import {
+  descriptionToAdf,
+  findAccountToken,
+  normalizeJiraIssueLinks,
+  resolveIssueLinkRelationship,
+  selectAcliProfile,
+} from "./atlassian.ts";
 
 type AdfDocument = {
   content: Array<{ type: string; content?: unknown[] }>;
@@ -112,4 +118,157 @@ test("rejects an ambiguous relationship phrase", () => {
     () => resolveIssueLinkRelationship(ambiguous, "is blocked by"),
     /Ambiguous relationship/,
   );
+});
+
+test("labels an inwardIssue with the inward relationship", () => {
+  const links = normalizeJiraIssueLinks("PROJ-1", [
+    {
+      id: "20000",
+      type: {
+        id: "10000",
+        name: "Blocks",
+        inward: "is blocked by",
+        outward: "blocks",
+      },
+      inwardIssue: {
+        key: "PROJ-2",
+        fields: {
+          summary: "Dependency",
+          status: { name: "In Progress" },
+        },
+      },
+    },
+  ]);
+
+  assert.deepEqual(links, [
+    {
+      id: "20000",
+      type: "Blocks",
+      relationship: "is blocked by",
+      otherKey: "PROJ-2",
+      otherSummary: "Dependency",
+      otherStatus: "In Progress",
+    },
+  ]);
+});
+
+test("labels an outwardIssue with the outward relationship", () => {
+  const links = normalizeJiraIssueLinks("PROJ-1", [
+    {
+      id: "20001",
+      type: {
+        id: "10000",
+        name: "Blocks",
+        inward: "is blocked by",
+        outward: "blocks",
+      },
+      outwardIssue: {
+        key: "PROJ-3",
+        fields: {
+          summary: "Blocked work",
+          status: { name: "To Do" },
+        },
+      },
+    },
+  ]);
+
+  assert.deepEqual(links, [
+    {
+      id: "20001",
+      type: "Blocks",
+      relationship: "blocks",
+      otherKey: "PROJ-3",
+      otherSummary: "Blocked work",
+      otherStatus: "To Do",
+    },
+  ]);
+});
+
+test("selects the ACLI profile named by cloud and account IDs", () => {
+  const selected = selectAcliProfile({
+    version: 1,
+    current_profile: "cloud-2:account-2",
+    profiles: [
+      {
+        site: "first.atlassian.net",
+        cloud_id: "cloud-1",
+        account_id: "account-1",
+        display_name: "First User",
+        email: "first@example.com",
+        auth_type: "oauth_global",
+      },
+      {
+        site: "second.atlassian.net",
+        cloud_id: "cloud-2",
+        account_id: "account-2",
+        display_name: "Second User",
+        email: "second@example.com",
+        auth_type: "oauth_global",
+      },
+    ],
+  });
+  assert.equal(selected.email, "second@example.com");
+  assert.equal(selected.site, "second.atlassian.net");
+});
+
+
+test("resolves a product profile independently of the global default", () => {
+  const selected = selectAcliProfile(
+    {
+      version: 1,
+      current_profile: "cloud-1:account-1",
+      profiles: [
+        {
+          site: "first.atlassian.net",
+          cloud_id: "cloud-1",
+          account_id: "account-1",
+          display_name: "First User",
+          email: "first@example.com",
+          auth_type: "oauth",
+        },
+        {
+          site: "second.atlassian.net",
+          cloud_id: "cloud-2",
+          account_id: "account-2",
+          display_name: "Second User",
+          email: "second@example.com",
+          auth_type: "oauth",
+        },
+      ],
+    },
+    "cloud-2:account-2",
+  );
+
+  assert.equal(selected.email, "second@example.com");
+});
+
+test("finds a token by site and email", () => {
+  const token = findAccountToken(
+    {
+      "first.atlassian.net": {
+        "first@example.com": "first-token",
+      },
+      "second.atlassian.net": {
+        "second@example.com": "second-token",
+      },
+    },
+    "second.atlassian.net",
+    "second@example.com",
+  );
+
+  assert.equal(token, "second-token");
+});
+
+test("does not fall back to another account's token", () => {
+  const token = findAccountToken(
+    {
+      "example.atlassian.net": {
+        "first@example.com": "first-token",
+      },
+    },
+    "example.atlassian.net",
+    "second@example.com",
+  );
+
+  assert.equal(token, undefined);
 });

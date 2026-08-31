@@ -62,7 +62,7 @@ async function search() {
   }
 
   const data = response.data!;
-  const siteUrl = getSiteUrl();
+  const siteUrl = getSiteUrl("confluence");
 
   const pages = data.results.map((page) => ({
     id: page.id,

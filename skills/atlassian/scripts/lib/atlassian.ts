@@ -1,60 +1,157 @@
-import { config } from "dotenv";
 import { randomUUID } from "crypto";
 
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { readFile } from "fs/promises";
-import { basename, resolve } from "path";
-import os from "os";
-
-// Load atlassian.env file from ~/.local/secrets/atlassian.env
-config({ path: resolve(os.homedir(), ".local/secrets/atlassian.env") });
+import { basename, join } from "path";
+import { homedir } from "os";
+import { parse as parseYaml } from "yaml";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
+export type AtlassianProduct = "jira" | "confluence";
+export type AtlassianTokenStore = Record<string, Record<string, string>>;
+
 export interface AtlassianConfig {
+  product: AtlassianProduct;
   site: string;
   email: string;
-  apiToken: string;
+  authorization: string;
+  expectedAccountId: string;
 }
 
-export function getConfig(): AtlassianConfig {
-  const site = process.env.ATLASSIAN_SITE;
-  const email = process.env.ATLASSIAN_EMAIL;
-  const apiToken = process.env.ATLASSIAN_API_TOKEN;
+interface AcliProfile {
+  site: string;
+  cloud_id: string;
+  account_id: string;
+  display_name: string;
+  email: string;
+  auth_type: string;
+}
 
-  if (!site) {
+interface AcliAuthConfig {
+  version: number;
+  current_profile: string;
+  profiles: AcliProfile[];
+}
+
+const configCache = new Map<AtlassianProduct, AtlassianConfig>();
+const validatedProfiles = new Set<string>();
+
+export function selectAcliProfile(
+  config: AcliAuthConfig,
+  profileId = config.current_profile,
+): AcliProfile {
+  const selected = config.profiles.find(
+    (profile) =>
+      `${profile.cloud_id}:${profile.account_id}` === profileId,
+  );
+
+  if (!selected) {
     exitWithError(
-      "ATLASSIAN_SITE not set. Add to .env: ATLASSIAN_SITE=yourcompany.atlassian.net"
+      `ACLI profile "${profileId}" is missing from its profile list`,
     );
   }
 
-  if (!email) {
+  return selected;
+}
+
+export function findAccountToken(
+  store: AtlassianTokenStore,
+  site: string,
+  email: string,
+): string | undefined {
+  const token = store[site]?.[email];
+  return typeof token === "string" && token.length > 0 ? token : undefined;
+}
+
+function readAcliAuthConfig(product: AtlassianProduct): AcliAuthConfig {
+  const configDirectory = process.env.XDG_CONFIG_HOME
+    ? join(process.env.XDG_CONFIG_HOME, "acli")
+    : join(homedir(), ".config", "acli");
+  const path = join(configDirectory, `${product}_config.yaml`);
+  try {
+    return parseYaml(readFileSync(path, "utf8")) as AcliAuthConfig;
+  } catch (error) {
     exitWithError(
-      "ATLASSIAN_EMAIL not set. Add to .env: ATLASSIAN_EMAIL=you@example.com"
+      `Failed to read ACLI configuration "${path}": ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
+}
 
+function readTokenStore(): {
+  path: string;
+  tokens: AtlassianTokenStore;
+} {
+  const path = join(
+    homedir(),
+    ".local",
+    "secrets",
+    "atlassian-tokens.json",
+  );
+
+  try {
+    const mode = statSync(path).mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      exitWithError(
+        `Atlassian token store "${path}" must not be accessible by group or other users; run chmod 600`,
+      );
+    }
+
+    const tokens = JSON.parse(readFileSync(path, "utf8"));
+    if (!tokens || typeof tokens !== "object" || Array.isArray(tokens)) {
+      exitWithError(`Atlassian token store "${path}" must contain a JSON object`);
+    }
+    return { path, tokens: tokens as AtlassianTokenStore };
+  } catch (error) {
+    exitWithError(
+      `Failed to read Atlassian token store "${path}": ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
+export function getConfig(
+  product: AtlassianProduct = "jira",
+): AtlassianConfig {
+  const cached = configCache.get(product);
+  if (cached) {
+    return cached;
+  }
+
+  const productConfig = readAcliAuthConfig(product);
+  const profile = selectAcliProfile(productConfig);
+  const tokenStore = readTokenStore();
+  const apiToken = findAccountToken(
+    tokenStore.tokens,
+    profile.site,
+    profile.email,
+  );
   if (!apiToken) {
     exitWithError(
-      "ATLASSIAN_API_TOKEN not set. Generate at: https://id.atlassian.com/manage-profile/security/api-tokens"
+      `No API token is configured for the selected ACLI ${product} account ${profile.email} at ${profile.site}. Add it to "${tokenStore.path}" under site, then email.`,
     );
   }
 
-  return { site, email, apiToken };
+  const config: AtlassianConfig = {
+    product,
+    site: profile.site,
+    email: profile.email,
+    authorization: `Basic ${Buffer.from(`${profile.email}:${apiToken}`).toString("base64")}`,
+    expectedAccountId: profile.account_id,
+  };
+  configCache.set(product, config);
+  return config;
 }
 
 // ============================================================================
 // HTTP Client
 // ============================================================================
 
-function getAuthHeader(cfg: AtlassianConfig): string {
-  const credentials = Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString(
-    "base64"
-  );
-  return `Basic ${credentials}`;
-}
 
 export interface ApiResponse<T> {
   ok: boolean;
@@ -63,18 +160,57 @@ export interface ApiResponse<T> {
   status?: number;
 }
 
+async function validateTokenIdentity(cfg: AtlassianConfig): Promise<void> {
+  const profileKey = `${cfg.product}:${cfg.site}:${cfg.expectedAccountId}`;
+  if (validatedProfiles.has(profileKey)) {
+    return;
+  }
+
+  const endpoint =
+    cfg.product === "jira"
+      ? `https://${cfg.site}/rest/api/3/myself`
+      : `https://${cfg.site}/wiki/rest/api/user/current`;
+  const response = await fetch(endpoint, {
+    headers: {
+      Authorization: cfg.authorization,
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) {
+    exitWithError(
+      `Failed to verify ${cfg.product} API-token identity (${response.status})`,
+    );
+  }
+
+  const user = await response.json() as { accountId?: string };
+  if (user.accountId !== cfg.expectedAccountId) {
+    exitWithError(
+      `${cfg.product} API token belongs to a different user than the selected ACLI profile`,
+    );
+  }
+
+  validatedProfiles.add(profileKey);
+}
+
 async function request<T>(
   url: string,
   cfg: AtlassianConfig,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
   try {
+    await validateTokenIdentity(cfg);
+    const headers: Record<string, string> = {
+      Authorization: cfg.authorization,
+      Accept: "application/json",
+    };
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(url, {
       ...options,
       headers: {
-        Authorization: getAuthHeader(cfg),
-        "Content-Type": "application/json",
-        Accept: "application/json",
+        ...headers,
         ...options.headers,
       },
     });
@@ -121,7 +257,7 @@ export async function jiraGet<T>(
   endpoint: string,
   params?: Record<string, string | string[]>
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("jira");
   let url = `https://${cfg.site}/rest/api/3/${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
@@ -141,7 +277,7 @@ export async function jiraPost<T>(
   endpoint: string,
   body: unknown
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("jira");
   const url = `https://${cfg.site}/rest/api/3/${endpoint}`;
   return request<T>(url, cfg, {
     method: "POST",
@@ -153,7 +289,7 @@ export async function jiraPut<T>(
   endpoint: string,
   body: unknown
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("jira");
   const url = `https://${cfg.site}/rest/api/3/${endpoint}`;
   return request<T>(url, cfg, {
     method: "PUT",
@@ -164,7 +300,7 @@ export async function jiraPut<T>(
 export async function jiraDelete<T>(
   endpoint: string
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("jira");
   const url = `https://${cfg.site}/rest/api/3/${endpoint}`;
   return request<T>(url, cfg, { method: "DELETE" });
 }
@@ -174,53 +310,21 @@ export async function jiraUploadAttachment<T>(
   filePath: string,
   fileName?: string
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("jira");
   const url = `https://${cfg.site}/rest/api/3/issue/${encodeURIComponent(issueKey)}/attachments`;
 
-  try {
-    const bytes = await readFile(filePath);
-    const form = new FormData();
-    const name = fileName && fileName.length > 0 ? fileName : basename(filePath);
-    form.append("file", new Blob([bytes]), name);
+  const bytes = await readFile(filePath);
+  const form = new FormData();
+  const name = fileName && fileName.length > 0 ? fileName : basename(filePath);
+  form.append("file", new Blob([bytes]), name);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: getAuthHeader(cfg),
-        Accept: "application/json",
-        "X-Atlassian-Token": "no-check",
-      },
-      body: form,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage: string;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage =
-          errorJson.errorMessages?.join(", ") ||
-          errorJson.message ||
-          errorJson.errorMessage ||
-          errorText;
-      } catch {
-        errorMessage = errorText;
-      }
-      return {
-        ok: false,
-        error: `API error (${response.status}): ${errorMessage}`,
-        status: response.status,
-      };
-    }
-
-    const data = await response.json();
-    return { ok: true, data };
-  } catch (error) {
-    return {
-      ok: false,
-      error: `Network error: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
+  return request<T>(url, cfg, {
+    method: "POST",
+    headers: {
+      "X-Atlassian-Token": "no-check",
+    },
+    body: form,
+  });
 }
 
 // ============================================================================
@@ -231,7 +335,7 @@ export async function confluenceGet<T>(
   endpoint: string,
   params?: Record<string, string>
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("confluence");
   let url = `https://${cfg.site}/wiki/api/v2/${endpoint}`;
   if (params) {
     url += `?${new URLSearchParams(params)}`;
@@ -243,7 +347,7 @@ export async function confluencePost<T>(
   endpoint: string,
   body: unknown
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("confluence");
   const url = `https://${cfg.site}/wiki/api/v2/${endpoint}`;
   return request<T>(url, cfg, {
     method: "POST",
@@ -255,7 +359,7 @@ export async function confluencePut<T>(
   endpoint: string,
   body: unknown
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("confluence");
   const url = `https://${cfg.site}/wiki/api/v2/${endpoint}`;
   return request<T>(url, cfg, {
     method: "PUT",
@@ -266,7 +370,7 @@ export async function confluencePut<T>(
 export async function confluenceDelete<T>(
   endpoint: string
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("confluence");
   const url = `https://${cfg.site}/wiki/api/v2/${endpoint}`;
   return request<T>(url, cfg, {
     method: "DELETE",
@@ -278,7 +382,7 @@ export async function confluenceLegacyGet<T>(
   endpoint: string,
   params?: Record<string, string>
 ): Promise<ApiResponse<T>> {
-  const cfg = getConfig();
+  const cfg = getConfig("confluence");
   let url = `https://${cfg.site}/wiki/rest/api/${endpoint}`;
   if (params) {
     url += `?${new URLSearchParams(params)}`;
@@ -322,8 +426,10 @@ export function parseJsonArg<T>(arg: string, name: string): T {
   }
 }
 
-export function getSiteUrl(): string {
-  return `https://${getConfig().site}`;
+export function getSiteUrl(
+  product: AtlassianProduct = "jira",
+): string {
+  return `https://${getConfig(product).site}`;
 }
 
 type AdfMark =
@@ -886,6 +992,69 @@ export interface JiraIssueLinkType {
   name: string;
   inward: string;
   outward: string;
+}
+
+export interface JiraLinkedIssue {
+  key: string;
+  fields?: {
+    summary?: string;
+    status?: { name: string };
+  };
+}
+
+export interface JiraIssueLink {
+  id: string;
+  type: JiraIssueLinkType;
+  inwardIssue?: JiraLinkedIssue;
+  outwardIssue?: JiraLinkedIssue;
+}
+
+export interface NormalizedJiraIssueLink {
+  id: string;
+  type: string;
+  relationship: string;
+  otherKey: string;
+  otherSummary: string | null;
+  otherStatus: string | null;
+}
+
+/**
+ * Normalize Jira issue links from the perspective of the issue being read.
+ *
+ * Jira labels an `inwardIssue` with `type.inward` and an `outwardIssue` with
+ * `type.outward`.
+ */
+export function normalizeJiraIssueLinks(
+  issueKey: string,
+  links: JiraIssueLink[],
+): NormalizedJiraIssueLink[] {
+  const current = issueKey.toUpperCase();
+
+  return links.flatMap((link) => {
+    if (link.inwardIssue && link.inwardIssue.key.toUpperCase() !== current) {
+      return [{
+        id: link.id,
+        type: link.type.name,
+        relationship: link.type.inward,
+        otherKey: link.inwardIssue.key,
+        otherSummary: link.inwardIssue.fields?.summary ?? null,
+        otherStatus: link.inwardIssue.fields?.status?.name ?? null,
+      }];
+    }
+
+    if (link.outwardIssue && link.outwardIssue.key.toUpperCase() !== current) {
+      return [{
+        id: link.id,
+        type: link.type.name,
+        relationship: link.type.outward,
+        otherKey: link.outwardIssue.key,
+        otherSummary: link.outwardIssue.fields?.summary ?? null,
+        otherStatus: link.outwardIssue.fields?.status?.name ?? null,
+      }];
+    }
+
+    return [];
+  });
 }
 
 /**

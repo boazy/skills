@@ -3,8 +3,10 @@ import {
   jiraGet,
   jiraPost,
   exitWithError,
+  normalizeJiraIssueLinks,
   output,
   resolveIssueLinkRelationship,
+  type JiraIssueLink,
   type JiraIssueLinkType,
 } from "./lib/atlassian.ts";
 
@@ -16,34 +18,12 @@ interface IssueLinkTypesResponse {
   issueLinkTypes: JiraIssueLinkType[];
 }
 
-interface LinkedIssue {
-  key: string;
-  fields?: {
-    summary?: string;
-    status?: { name: string };
-  };
-}
-
-interface IssueLink {
-  id: string;
-  type: JiraIssueLinkType;
-  inwardIssue?: LinkedIssue;
-  outwardIssue?: LinkedIssue;
-}
+type IssueLink = JiraIssueLink;
 
 interface IssueLinksResponse {
   fields?: {
     issuelinks?: IssueLink[];
   };
-}
-
-interface MappedLink {
-  id: string;
-  type: string;
-  relationship: string;
-  otherKey: string;
-  otherSummary: string | null;
-  otherStatus: string | null;
 }
 
 const USAGE = `Usage: bunx tsx jira-link.ts <action> [args]
@@ -85,35 +65,6 @@ if (!action || action === "--help" || action === "-h") {
   process.exit(action ? 0 : 1);
 }
 
-function mapLink(link: IssueLink, currentKey: string): MappedLink | null {
-  const current = currentKey.toUpperCase();
-  const outward = link.outwardIssue;
-  const inward = link.inwardIssue;
-
-  if (outward && outward.key.toUpperCase() !== current) {
-    return {
-      id: link.id,
-      type: link.type.name,
-      relationship: link.type.inward,
-      otherKey: outward.key,
-      otherSummary: outward.fields?.summary ?? null,
-      otherStatus: outward.fields?.status?.name ?? null,
-    };
-  }
-
-  if (inward && inward.key.toUpperCase() !== current) {
-    return {
-      id: link.id,
-      type: link.type.name,
-      relationship: link.type.outward,
-      otherKey: inward.key,
-      otherSummary: inward.fields?.summary ?? null,
-      otherStatus: inward.fields?.status?.name ?? null,
-    };
-  }
-
-  return null;
-}
 
 async function fetchLinkTypes(): Promise<JiraIssueLinkType[]> {
   const response = await jiraGet<IssueLinkTypesResponse>("issueLinkType");
@@ -148,9 +99,10 @@ async function listTypes() {
 }
 
 async function listLinks(issueKey: string) {
-  const links = (await fetchIssueLinks(issueKey))
-    .map((link) => mapLink(link, issueKey))
-    .filter((link): link is MappedLink => link !== null);
+  const links = normalizeJiraIssueLinks(
+    issueKey,
+    await fetchIssueLinks(issueKey),
+  );
 
   output({
     issueKey,
@@ -172,10 +124,10 @@ async function addLink(
     exitWithError(error instanceof Error ? error.message : String(error));
   }
 
-  const existing = (await fetchIssueLinks(issueKey))
-    .map((link) => mapLink(link, issueKey))
-    .filter((link): link is MappedLink => link !== null)
-    .find(
+  const existing = normalizeJiraIssueLinks(
+    issueKey,
+    await fetchIssueLinks(issueKey),
+  ).find(
       (link) =>
         link.type === resolved.type.name &&
         link.otherKey.toUpperCase() === otherIssueKey.toUpperCase() &&

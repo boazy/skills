@@ -1,23 +1,82 @@
 ---
 name: atlassian
-description: Interact with Jira and Confluence via REST API - search, create, update issues and pages
+description: Interact with Jira and Confluence through ACLI and REST API scripts
 ---
 
 # Atlassian Skill
 
-Access Jira and Confluence directly via REST APIs. This skill provides full CRUD operations for issues and pages without requiring the MCP server.
+Use the Atlassian Command Line Interface (ACLI) for supported Jira and
+Confluence operations. Use the bundled REST API scripts only where ACLI does
+not provide the required operation or behavior.
 
-## Authentication
+## ACLI installation and authentication
 
-Requires environment variables in `~/.local/secrets/atlassian.env`:
-- `ATLASSIAN_SITE` - Your Atlassian site (e.g., `yourcompany.atlassian.net`)
-- `ATLASSIAN_EMAIL` - Your Atlassian account email
-- `ATLASSIAN_API_TOKEN` - API token from https://id.atlassian.com/manage-profile/security/api-tokens
+Check whether ACLI is installed:
 
-## Installation recovery
+```bash
+command -v acli
+```
 
-If any Atlassian skill script returns an error, run this from the skill directory
-before retrying:
+If the command is missing, install ACLI globally through mise and the aqua
+registry:
+
+```bash
+mise use -g aqua:atlassian.com/acli
+```
+
+Check that each product is authenticated:
+
+```bash
+acli jira auth status
+acli confluence auth status
+```
+
+If a product is not authenticated, use its browser login:
+
+```bash
+acli jira auth login --web
+acli confluence auth login --web
+```
+
+Jira and Confluence can select different accounts. Switch them independently:
+
+```bash
+acli jira auth switch
+acli confluence auth switch
+```
+
+### Script authentication
+
+REST scripts identify the selected user from `current_profile` in
+`~/.config/acli/jira_config.yaml` or `confluence_config.yaml`. Script logic MUST
+NOT parse the human-readable output of `acli auth status`.
+
+API tokens live in `~/.local/secrets/atlassian-tokens.json`, organized first by
+site and then by email:
+
+```json
+{
+  "yourcompany.atlassian.net": {
+    "user@example.com": "<api-token>",
+    "another-user@example.com": "<api-token>"
+  }
+}
+```
+
+The file MUST have mode `0600`. Scripts find the exact site-and-email entry for
+the selected product profile and never fall back to another account. Before the
+first request, they call the product's current-user endpoint and verify that the
+token's account ID matches the selected ACLI profile.
+
+If the selected account has no token, stop and ask the user to create an
+Atlassian API token at
+https://id.atlassian.com/manage-profile/security/api-tokens and add it under the
+matching site and email. Never ask the user to paste the token into chat.
+
+### Script dependency recovery
+
+If a bundled script reports a missing dependency, run this from the skill
+directory before retrying:
 
 ```bash
 bun ci
@@ -105,7 +164,10 @@ Do not create a link when the mention is incidental or the relationship
 is unclear. Do not guess a type name such as `"Blocks"`; pass the
 phrase.
 
-## Available Scripts
+## Available commands and scripts
+
+Use ACLI for the operations documented with `acli` commands below. The bundled
+scripts remain only where ACLI does not cover the full behavior.
 
 ### Jira
 
@@ -432,9 +494,8 @@ Examples:
 - `bunx tsx scripts/jira-link.ts add PROJ-200 "blocks" PROJ-100`
 - `bunx tsx scripts/jira-link.ts add PROJ-200 "relates to" PROJ-100`
 
-`jira-get.ts` also returns `links` with the same phrase-on-this-issue
-shape. List before adding. A duplicate of the same type and direction is
-a no-op (`alreadyLinked: true`).
+List links before adding. A duplicate of the same type and direction is a no-op
+(`alreadyLinked: true`).
 
 #### Resolve Field Names / IDs
 
@@ -475,11 +536,12 @@ Image embedding note:
 - If you want embedded images, upload the file first with `jira-attachment.ts`, then use the returned Atlassian `contentUrl` in your markdown image URL.
 
 #### Delete Attachment
+
 ```bash
-bunx tsx scripts/jira-delete-attachment.ts <attachmentId>
+acli jira workitem attachment delete --id <attachmentId>
 ```
-Example:
-- `bunx tsx scripts/jira-delete-attachment.ts 251415`
+
+Example: `acli jira workitem attachment delete --id 251415`
 
 ### Confluence
 

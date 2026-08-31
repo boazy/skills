@@ -43,7 +43,7 @@ async function getPersonalSpace() {
   }
 
   const space = user.personalSpace;
-  const siteUrl = getSiteUrl();
+  const siteUrl = getSiteUrl("confluence");
 
   output({
     accountId: user.accountId,
